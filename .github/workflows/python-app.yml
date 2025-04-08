@@ -9,12 +9,31 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: mydatabase
+          POSTGRES_USER: myuser
+          POSTGRES_PASSWORD: mypassword
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     strategy:
       matrix:
         python-version: ["3.12"]
+
+    env:
+      DATABASE_URL: postgres://myuser:mypassword@localhost:5432/mydatabase
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
@@ -45,6 +64,13 @@ jobs:
           uv pip install pytest==7.4.3 mypy==1.7.1 ruff==0.1.6 pytest-cov
           if [ -f requirements.txt ]; then uv pip install -r requirements.txt; fi
 
+      - name: Wait for PostgreSQL to be ready
+        run: |
+          for i in {1..10}; do
+            pg_isready -h localhost -p 5432 -U myuser && break
+            echo "Waiting for PostgreSQL..." && sleep 2
+          done
+
       - name: Lint with ruff
         run: |
           source .venv/bin/activate
@@ -71,11 +97,10 @@ jobs:
         with:
           name: test-results
           path: test-results.xml
-          
+
       - name: Upload HTML coverage report
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: coverage-report
           path: htmlcov/
-          

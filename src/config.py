@@ -11,7 +11,7 @@ load_dotenv(dotenv_path=find_dotenv(".env"), override=True)
 
 class Settings:
     API_KEY: str | None = os.getenv("API_KEY")
-    POSTGRES_URI: str | None = os.getenv("POSTGRES_URI")
+    POSTGRES_URI: str | None = os.getenv("POSTGRES_URI") or os.getenv("DATABASE_URL")
 
     def __init__(self):
         if not self.API_KEY:
