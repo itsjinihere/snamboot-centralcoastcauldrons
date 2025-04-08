@@ -57,10 +57,10 @@ def post_deliver_barrels(barrels_delivered: List[Barrel], order_id: int):
     delivery = calculate_barrel_summary(barrels_delivered)
 
     ml_totals: dict[str, float] = {
-    "red_ml": 0.0,
-    "green_ml": 0.0,
-    "blue_ml": 0.0,
-    "dark_ml": 0.0,
+        "red_ml": 0.0,
+        "green_ml": 0.0,
+        "blue_ml": 0.0,
+        "dark_ml": 0.0,
     }
 
     for barrel in barrels_delivered:

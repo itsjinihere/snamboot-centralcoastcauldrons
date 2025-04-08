@@ -37,16 +37,16 @@ def post_deliver_bottles(potions_delivered: List[PotionMixes], order_id: int):
     print(f"potions delivered: {potions_delivered} order_id: {order_id}")
 
     ml_used: dict[str, float] = {
-    "red_ml": 0.0,
-    "green_ml": 0.0,
-    "blue_ml": 0.0,
-    "dark_ml": 0.0,
+        "red_ml": 0.0,
+        "green_ml": 0.0,
+        "blue_ml": 0.0,
+        "dark_ml": 0.0,
     }
 
     potions_made: dict[str, int] = {
-    "red_potions": 0,
-    "green_potions": 0,
-    "blue_potions": 0,
+        "red_potions": 0,
+        "green_potions": 0,
+        "blue_potions": 0,
     }
 
     for mix in potions_delivered:
