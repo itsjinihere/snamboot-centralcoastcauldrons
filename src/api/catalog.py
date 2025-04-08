@@ -1,6 +1,8 @@
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
 from typing import List, Annotated
+import sqlalchemy
+from src import database as db
 
 router = APIRouter()
 
@@ -18,17 +20,54 @@ class CatalogItem(BaseModel):
     )
 
 
-# Placeholder function, you will replace this with a database call
 def create_catalog() -> List[CatalogItem]:
-    return [
-        CatalogItem(
-            sku="RED_POTION_0",
-            name="red potion",
-            quantity=1,
-            price=50,
-            potion_type=[100, 0, 0, 0],
-        )
-    ]
+    with db.engine.begin() as connection:
+        row = connection.execute(
+            sqlalchemy.text("""
+                SELECT red_potions, green_potions, blue_potions
+                FROM global_inventory
+            """)
+        ).one()
+
+        catalog = []
+
+        # Optional dynamic price logic stub
+        def price_for(color: str, base: int) -> int:
+            """Return dynamic price based on stock or color if desired."""
+            # Example: raise price if stock is low
+            count = getattr(row, f"{color}_potions")
+            if count < 3:
+                return min(base + 10, 500)  # price bump
+            return base
+
+        if row.red_potions > 0:
+            catalog.append(CatalogItem(
+                sku="RED_POTION_0",
+                name="Red Potion",
+                quantity=row.red_potions,
+                price=price_for("red", 50),
+                potion_type=[100, 0, 0, 0]
+            ))
+
+        if row.green_potions > 0:
+            catalog.append(CatalogItem(
+                sku="GREEN_POTION_0",
+                name="Green Potion",
+                quantity=row.green_potions,
+                price=price_for("green", 60),
+                potion_type=[0, 100, 0, 0]
+            ))
+
+        if row.blue_potions > 0:
+            catalog.append(CatalogItem(
+                sku="BLUE_POTION_0",
+                name="Blue Potion",
+                quantity=row.blue_potions,
+                price=price_for("blue", 70),
+                potion_type=[0, 0, 100, 0]
+            ))
+
+        return catalog[:6]  # Explicitly enforce 6-SKU limit
 
 
 @router.get("/catalog/", tags=["catalog"], response_model=List[CatalogItem])

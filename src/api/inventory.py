@@ -31,20 +31,25 @@ def get_inventory():
     what is reported here and my source of truth will be posted
     as errors on potion exchange.
     """
-
     with db.engine.begin() as connection:
         row = connection.execute(
             sqlalchemy.text(
                 """
-                SELECT gold
+                SELECT gold, red_ml, green_ml, blue_ml, dark_ml,
+                       red_potions, green_potions, blue_potions
                 FROM global_inventory
                 """
             )
         ).one()
 
-        gold = row.gold
+        total_ml = row.red_ml + row.green_ml + row.blue_ml + row.dark_ml
+        total_potions = row.red_potions + row.green_potions + row.blue_potions
 
-    return InventoryAudit(number_of_potions=0, ml_in_barrels=0, gold=gold)
+        return InventoryAudit(
+            number_of_potions=total_potions,
+            ml_in_barrels=total_ml,
+            gold=row.gold,
+        )
 
 
 @router.post("/plan", response_model=CapacityPlan)

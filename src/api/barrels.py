@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel, Field, field_validator
 from typing import List
-
+import random
 import sqlalchemy
 from src.api import auth
 from src import database as db
@@ -12,7 +12,6 @@ router = APIRouter(
     tags=["barrels"],
     dependencies=[Depends(auth.get_api_key)],
 )
-
 
 class Barrel(BaseModel):
     sku: str
@@ -35,44 +34,53 @@ class Barrel(BaseModel):
             raise ValueError("Sum of potion_type values must be exactly 1.0")
         return potion_type
 
-
 class BarrelOrder(BaseModel):
     sku: str
     quantity: int = Field(gt=0, description="Quantity must be greater than 0")
-
 
 @dataclass
 class BarrelSummary:
     gold_paid: int
 
-
 def calculate_barrel_summary(barrels: List[Barrel]) -> BarrelSummary:
     return BarrelSummary(gold_paid=sum(b.price * b.quantity for b in barrels))
 
-
 @router.post("/deliver/{order_id}", status_code=status.HTTP_204_NO_CONTENT)
 def post_deliver_barrels(barrels_delivered: List[Barrel], order_id: int):
-    """
-    Processes barrels delivered based on the provided order_id. order_id is a unique value representing
-    a single delivery; the call is idempotent based on the order_id.
-    """
     print(f"barrels delivered: {barrels_delivered} order_id: {order_id}")
 
     delivery = calculate_barrel_summary(barrels_delivered)
+
+    ml_totals = {"red_ml": 0, "green_ml": 0, "blue_ml": 0, "dark_ml": 0}
+
+    for barrel in barrels_delivered:
+        total_ml = barrel.ml_per_barrel * barrel.quantity
+        ml_totals["red_ml"] += total_ml * barrel.potion_type[0]
+        ml_totals["green_ml"] += total_ml * barrel.potion_type[1]
+        ml_totals["blue_ml"] += total_ml * barrel.potion_type[2]
+        ml_totals["dark_ml"] += total_ml * barrel.potion_type[3]
 
     with db.engine.begin() as connection:
         connection.execute(
             sqlalchemy.text(
                 """
-                UPDATE global_inventory SET 
-                gold = gold - :gold_paid
+                UPDATE global_inventory
+                SET
+                    gold = gold - :gold_paid,
+                    red_ml = red_ml + :red_ml,
+                    green_ml = green_ml + :green_ml,
+                    blue_ml = blue_ml + :blue_ml,
+                    dark_ml = dark_ml + :dark_ml
                 """
             ),
-            [{"gold_paid": delivery.gold_paid}],
+            {
+                "gold_paid": delivery.gold_paid,
+                "red_ml": int(ml_totals["red_ml"]),
+                "green_ml": int(ml_totals["green_ml"]),
+                "blue_ml": int(ml_totals["blue_ml"]),
+                "dark_ml": int(ml_totals["dark_ml"]),
+            },
         )
-
-    pass
-
 
 def create_barrel_plan(
     gold: int,
@@ -81,54 +89,65 @@ def create_barrel_plan(
     current_green_ml: int,
     current_blue_ml: int,
     current_dark_ml: int,
+    red_potions: int,
+    green_potions: int,
+    blue_potions: int,
     wholesale_catalog: List[Barrel],
 ) -> List[BarrelOrder]:
     print(
-        f"gold: {gold}, max_barrel_capacity: {max_barrel_capacity}, current_red_ml: {current_red_ml}, current_green_ml: {current_green_ml}, current_blue_ml: {current_blue_ml}, current_dark_ml: {current_dark_ml}, wholesale_catalog: {wholesale_catalog}"
+        f"gold: {gold}, max_barrel_capacity: {max_barrel_capacity}, "
+        f"current_red_ml: {current_red_ml}, current_green_ml: {current_green_ml}, "
+        f"current_blue_ml: {current_blue_ml}, current_dark_ml: {current_dark_ml}, "
+        f"red_potions: {red_potions}, green_potions: {green_potions}, blue_potions: {blue_potions}, "
+        f"wholesale_catalog: {wholesale_catalog}"
     )
 
-    # find cheapest red barrel
-    red_barrel = min(
-        (barrel for barrel in wholesale_catalog if barrel.potion_type[0] == 1),
-        key=lambda b: b.price,
-        default=None,
-    )
+    color_index_map = {"red": 0, "green": 1, "blue": 2}
+    potion_counts = {"red": red_potions, "green": green_potions, "blue": blue_potions}
+    eligible_colors = [color for color, count in potion_counts.items() if count < 5]
 
-    # make sure we can afford it
-    if red_barrel and red_barrel.price <= gold:
-        return [BarrelOrder(sku=red_barrel.sku, quantity=1)]
+    if not eligible_colors:
+        return []
 
-    # return an empty list if no affordable red barrel is found
+    chosen_color = random.choice(eligible_colors)
+    idx = color_index_map[chosen_color]
+
+    matching_barrels = [
+        barrel for barrel in wholesale_catalog
+        if barrel.potion_type[idx] == 1.0
+    ]
+
+    cheapest_barrel = min(matching_barrels, key=lambda b: b.price, default=None)
+
+    if cheapest_barrel and cheapest_barrel.price <= gold:
+        return [BarrelOrder(sku=cheapest_barrel.sku, quantity=1)]
+
     return []
-
 
 @router.post("/plan", response_model=List[BarrelOrder])
 def get_wholesale_purchase_plan(wholesale_catalog: List[Barrel]):
-    """
-    Gets the plan for purchasing wholesale barrels. The call passes in a catalog of available barrels
-    and the shop returns back which barrels they'd like to purchase and how many.
-    """
     print(f"barrel catalog: {wholesale_catalog}")
 
     with db.engine.begin() as connection:
         row = connection.execute(
             sqlalchemy.text(
                 """
-                SELECT gold
+                SELECT gold, red_ml, green_ml, blue_ml, dark_ml,
+                       red_potions, green_potions, blue_potions
                 FROM global_inventory
                 """
             )
         ).one()
 
-        gold = row.gold
-
-    # TODO: fill in values correctly based on what is in your database
     return create_barrel_plan(
-        gold=gold,
+        gold=row.gold,
         max_barrel_capacity=10000,
-        current_red_ml=0,
-        current_green_ml=0,
-        current_blue_ml=0,
-        current_dark_ml=0,
+        current_red_ml=row.red_ml,
+        current_green_ml=row.green_ml,
+        current_blue_ml=row.blue_ml,
+        current_dark_ml=row.dark_ml,
+        red_potions=row.red_potions,
+        green_potions=row.green_potions,
+        blue_potions=row.blue_potions,
         wholesale_catalog=wholesale_catalog,
     )
