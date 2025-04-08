@@ -1,9 +1,7 @@
 from src.api.barrels import calculate_barrel_summary, create_barrel_plan, Barrel, BarrelOrder
-from src.api.bottler import create_bottle_plan, PotionMixes
+from src.api.bottler import create_bottle_plan
 from src.api.catalog import create_catalog
-from src.api.carts import checkout, CartCheckout
 from src.api.inventory import get_inventory
-from typing import List
 
 
 # ----- BARRELS -----
