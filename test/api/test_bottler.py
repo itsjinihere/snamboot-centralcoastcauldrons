@@ -13,13 +13,17 @@ def test_bottle_red_potions() -> None:
     current_potion_inventory: List[PotionMixes] = []
 
     result = create_bottle_plan(
-        red_ml=red_ml,
-        green_ml=green_ml,
-        blue_ml=blue_ml,
-        dark_ml=dark_ml,
-        maximum_potion_capacity=maximum_potion_capacity,
-        current_potion_inventory=current_potion_inventory,
-    )
+    red_ml=red_ml,
+    green_ml=green_ml,
+    blue_ml=blue_ml,
+    dark_ml=dark_ml,
+    red_potions=0,
+    green_potions=0,
+    blue_potions=0,
+    maximum_potion_capacity=maximum_potion_capacity,
+    current_potion_inventory=current_potion_inventory,
+)
+
 
     assert len(result) == 1
     assert result[0].potion_type == [100, 0, 0, 0]

@@ -61,6 +61,9 @@ def test_buy_small_red_barrel_plan() -> None:
     current_green_ml = 1000
     current_blue_ml = 1000
     current_dark_ml = 1000
+    red_potions = 0
+    green_potions = 0
+    blue_potions = 0
 
     barrel_orders = create_barrel_plan(
         gold,
@@ -69,14 +72,17 @@ def test_buy_small_red_barrel_plan() -> None:
         current_green_ml,
         current_blue_ml,
         current_dark_ml,
+        red_potions,
+        green_potions,
+        blue_potions,
         wholesale_catalog,
     )
 
     assert isinstance(barrel_orders, list)
     assert all(isinstance(order, BarrelOrder) for order in barrel_orders)
-    assert len(barrel_orders) > 0  # Ensure at least one order is generated
-    assert barrel_orders[0].sku == "SMALL_RED_BARREL"  # Placeholder expected output
-    assert barrel_orders[0].quantity == 1  # Placeholder quantity assertion
+    assert len(barrel_orders) > 0
+    assert barrel_orders[0].sku == "SMALL_RED_BARREL"
+    assert barrel_orders[0].quantity == 1
 
 
 def test_cant_afford_barrel_plan() -> None:
@@ -110,6 +116,9 @@ def test_cant_afford_barrel_plan() -> None:
     current_green_ml = 1000
     current_blue_ml = 1000
     current_dark_ml = 1000
+    red_potions = 0
+    green_potions = 0
+    blue_potions = 0
 
     barrel_orders = create_barrel_plan(
         gold,
@@ -118,9 +127,12 @@ def test_cant_afford_barrel_plan() -> None:
         current_green_ml,
         current_blue_ml,
         current_dark_ml,
+        red_potions,
+        green_potions,
+        blue_potions,
         wholesale_catalog,
     )
 
     assert isinstance(barrel_orders, list)
     assert all(isinstance(order, BarrelOrder) for order in barrel_orders)
-    assert len(barrel_orders) == 0  # Ensure at least one order is generated
+    assert len(barrel_orders) == 0
