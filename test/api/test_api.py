@@ -1,4 +1,9 @@
-from src.api.barrels import calculate_barrel_summary, create_barrel_plan, Barrel, BarrelOrder
+from src.api.barrels import (
+    calculate_barrel_summary,
+    create_barrel_plan,
+    Barrel,
+    BarrelOrder,
+)
 from src.api.bottler import create_bottle_plan
 from src.api.catalog import create_catalog
 from src.api.inventory import get_inventory
@@ -7,8 +12,20 @@ from src.api.inventory import get_inventory
 # ----- BARRELS -----
 def test_calculate_barrel_summary():
     barrels = [
-        Barrel(sku="R", ml_per_barrel=1000, potion_type=[1.0, 0, 0, 0], price=100, quantity=2),
-        Barrel(sku="G", ml_per_barrel=1000, potion_type=[0, 1.0, 0, 0], price=150, quantity=1),
+        Barrel(
+            sku="R",
+            ml_per_barrel=1000,
+            potion_type=[1.0, 0, 0, 0],
+            price=100,
+            quantity=2,
+        ),
+        Barrel(
+            sku="G",
+            ml_per_barrel=1000,
+            potion_type=[0, 1.0, 0, 0],
+            price=150,
+            quantity=1,
+        ),
     ]
     summary = calculate_barrel_summary(barrels)
     assert summary.gold_paid == 350
@@ -16,8 +33,20 @@ def test_calculate_barrel_summary():
 
 def test_create_barrel_plan_basic():
     catalog = [
-        Barrel(sku="R", ml_per_barrel=1000, potion_type=[1.0, 0, 0, 0], price=100, quantity=1),
-        Barrel(sku="G", ml_per_barrel=1000, potion_type=[0, 1.0, 0, 0], price=150, quantity=1),
+        Barrel(
+            sku="R",
+            ml_per_barrel=1000,
+            potion_type=[1.0, 0, 0, 0],
+            price=100,
+            quantity=1,
+        ),
+        Barrel(
+            sku="G",
+            ml_per_barrel=1000,
+            potion_type=[0, 1.0, 0, 0],
+            price=150,
+            quantity=1,
+        ),
     ]
     plan = create_barrel_plan(
         gold=200,
@@ -64,7 +93,7 @@ def test_catalog_excludes_zero():
 def test_checkout_calculation():
     # This test only checks logic—not actual DB modification.
     cart_items = {"RED_POTION_0": 2, "GREEN_POTION_0": 3}
-    #gold = 0
+    # gold = 0
     total = sum(cart_items.values()) * 50
     assert total == 250
 

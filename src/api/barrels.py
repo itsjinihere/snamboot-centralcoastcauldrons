@@ -13,6 +13,7 @@ router = APIRouter(
     dependencies=[Depends(auth.get_api_key)],
 )
 
+
 class Barrel(BaseModel):
     sku: str
     ml_per_barrel: int = Field(gt=0, description="Must be greater than 0")
@@ -34,16 +35,20 @@ class Barrel(BaseModel):
             raise ValueError("Sum of potion_type values must be exactly 1.0")
         return potion_type
 
+
 class BarrelOrder(BaseModel):
     sku: str
     quantity: int = Field(gt=0, description="Quantity must be greater than 0")
+
 
 @dataclass
 class BarrelSummary:
     gold_paid: int
 
+
 def calculate_barrel_summary(barrels: List[Barrel]) -> BarrelSummary:
     return BarrelSummary(gold_paid=sum(b.price * b.quantity for b in barrels))
+
 
 @router.post("/deliver/{order_id}", status_code=status.HTTP_204_NO_CONTENT)
 def post_deliver_barrels(barrels_delivered: List[Barrel], order_id: int):
@@ -82,6 +87,7 @@ def post_deliver_barrels(barrels_delivered: List[Barrel], order_id: int):
             },
         )
 
+
 def create_barrel_plan(
     gold: int,
     max_barrel_capacity: int,
@@ -113,8 +119,7 @@ def create_barrel_plan(
     idx = color_index_map[chosen_color]
 
     matching_barrels = [
-        barrel for barrel in wholesale_catalog
-        if barrel.potion_type[idx] == 1.0
+        barrel for barrel in wholesale_catalog if barrel.potion_type[idx] == 1.0
     ]
 
     cheapest_barrel = min(matching_barrels, key=lambda b: b.price, default=None)
@@ -123,6 +128,7 @@ def create_barrel_plan(
         return [BarrelOrder(sku=cheapest_barrel.sku, quantity=1)]
 
     return []
+
 
 @router.post("/plan", response_model=List[BarrelOrder])
 def get_wholesale_purchase_plan(wholesale_catalog: List[Barrel]):

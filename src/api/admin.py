@@ -13,7 +13,7 @@ router = APIRouter(
 @router.post("/reset", status_code=status.HTTP_204_NO_CONTENT)
 def reset():
     """
-    Reset the game state. Gold goes to 100, all potion and ml quantities 
+    Reset the game state. Gold goes to 100, all potion and ml quantities
     are reset to 0, and all carts and cart items are deleted.
     """
     with db.engine.begin() as connection:

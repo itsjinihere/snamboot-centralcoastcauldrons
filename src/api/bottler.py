@@ -110,7 +110,9 @@ def create_bottle_plan(
         color, potion_type, available_ml = random.choice(low_stock)
         max_quantity = min(available_ml // bottle_volume, 10)
         if max_quantity >= 1:
-            potion_plan.append(PotionMixes(potion_type=potion_type, quantity=int(max_quantity)))
+            potion_plan.append(
+                PotionMixes(potion_type=potion_type, quantity=int(max_quantity))
+            )
 
     return potion_plan
 

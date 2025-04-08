@@ -41,31 +41,37 @@ def create_catalog() -> List[CatalogItem]:
             return base
 
         if row.red_potions > 0:
-            catalog.append(CatalogItem(
-                sku="RED_POTION_0",
-                name="Red Potion",
-                quantity=row.red_potions,
-                price=price_for("red", 50),
-                potion_type=[100, 0, 0, 0]
-            ))
+            catalog.append(
+                CatalogItem(
+                    sku="RED_POTION_0",
+                    name="Red Potion",
+                    quantity=row.red_potions,
+                    price=price_for("red", 50),
+                    potion_type=[100, 0, 0, 0],
+                )
+            )
 
         if row.green_potions > 0:
-            catalog.append(CatalogItem(
-                sku="GREEN_POTION_0",
-                name="Green Potion",
-                quantity=row.green_potions,
-                price=price_for("green", 60),
-                potion_type=[0, 100, 0, 0]
-            ))
+            catalog.append(
+                CatalogItem(
+                    sku="GREEN_POTION_0",
+                    name="Green Potion",
+                    quantity=row.green_potions,
+                    price=price_for("green", 60),
+                    potion_type=[0, 100, 0, 0],
+                )
+            )
 
         if row.blue_potions > 0:
-            catalog.append(CatalogItem(
-                sku="BLUE_POTION_0",
-                name="Blue Potion",
-                quantity=row.blue_potions,
-                price=price_for("blue", 70),
-                potion_type=[0, 0, 100, 0]
-            ))
+            catalog.append(
+                CatalogItem(
+                    sku="BLUE_POTION_0",
+                    name="Blue Potion",
+                    quantity=row.blue_potions,
+                    price=price_for("blue", 70),
+                    potion_type=[0, 0, 100, 0],
+                )
+            )
 
         return catalog[:6]  # Explicitly enforce 6-SKU limit
 
