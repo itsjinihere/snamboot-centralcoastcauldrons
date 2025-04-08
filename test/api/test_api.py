@@ -64,7 +64,7 @@ def test_catalog_excludes_zero():
 def test_checkout_calculation():
     # This test only checks logic—not actual DB modification.
     cart_items = {"RED_POTION_0": 2, "GREEN_POTION_0": 3}
-    gold = 0
+    #gold = 0
     total = sum(cart_items.values()) * 50
     assert total == 250
 
