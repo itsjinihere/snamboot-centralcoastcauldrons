@@ -5,7 +5,7 @@ from typing import List
 
 
 def test_bottle_red_potions() -> None:
-    red_ml: int = 100
+    red_ml: int = 250
     green_ml: int = 0
     blue_ml: int = 0
     dark_ml: int = 0
