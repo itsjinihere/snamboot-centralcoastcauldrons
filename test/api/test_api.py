@@ -11,11 +11,13 @@ from src.api.bottler import create_bottle_plan
 from src.api.catalog import create_catalog
 from src.api.inventory import get_inventory
 
+
 # ----- TEST DATABASE SETUP -----
 @pytest.fixture(scope="session", autouse=True)
 def setup_database():
     with db.engine.begin() as conn:
-        conn.execute(sqlalchemy.text("""
+        conn.execute(
+            sqlalchemy.text("""
             CREATE TABLE IF NOT EXISTS global_inventory (
                 gold INTEGER DEFAULT 100,
                 red_ml INTEGER DEFAULT 0,
@@ -26,14 +28,16 @@ def setup_database():
                 green_potions INTEGER DEFAULT 0,
                 blue_potions INTEGER DEFAULT 0
             );
-        """))
+        """)
+        )
         # Optionally initialize with a row:
-        conn.execute(sqlalchemy.text("""
+        conn.execute(
+            sqlalchemy.text("""
             INSERT INTO global_inventory (gold, red_ml, green_ml, blue_ml, dark_ml, red_potions, green_potions, blue_potions)
             VALUES (1000, 1000, 1000, 1000, 1000, 10, 10, 10)
             ON CONFLICT DO NOTHING;
-        """))
-
+        """)
+        )
 
 
 # ----- BARRELS -----
