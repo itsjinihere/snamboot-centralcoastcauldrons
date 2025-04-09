@@ -14,9 +14,9 @@ class CatalogItem(BaseModel):
     price: Annotated[int, Field(ge=1, le=500)]
     potion_type: List[int] = Field(
         ...,
-        min_length=4,
-        max_length=4,
-        description="Must contain exactly 4 elements: [r, g, b, d]",
+        min_length=3,
+        max_length=3,
+        description="Must contain exactly 3 elements: [r, g, b]",
     )
 
 
@@ -26,21 +26,19 @@ def create_catalog() -> List[CatalogItem]:
             sqlalchemy.text("""
                 SELECT red_potions, green_potions, blue_potions
                 FROM global_inventory
+                LIMIT 1
             """)
         ).first()
 
         if not row:
-            return []  # Prevents mypy error + runtime crash
+            return []
 
         catalog = []
 
-        # Optional dynamic price logic stub
         def price_for(color: str, base: int) -> int:
-            """Return dynamic price based on stock or color if desired."""
-            # Example: raise price if stock is low
             count = getattr(row, f"{color}_potions")
             if count < 3:
-                return min(base + 10, 500)  # price bump
+                return min(base + 10, 500)
             return base
 
         if row.red_potions > 0:
@@ -50,7 +48,7 @@ def create_catalog() -> List[CatalogItem]:
                     name="Red Potion",
                     quantity=row.red_potions,
                     price=price_for("red", 50),
-                    potion_type=[100, 0, 0, 0],
+                    potion_type=[100, 0, 0],
                 )
             )
 
@@ -61,7 +59,7 @@ def create_catalog() -> List[CatalogItem]:
                     name="Green Potion",
                     quantity=row.green_potions,
                     price=price_for("green", 60),
-                    potion_type=[0, 100, 0, 0],
+                    potion_type=[0, 100, 0],
                 )
             )
 
@@ -72,11 +70,11 @@ def create_catalog() -> List[CatalogItem]:
                     name="Blue Potion",
                     quantity=row.blue_potions,
                     price=price_for("blue", 70),
-                    potion_type=[0, 0, 100, 0],
+                    potion_type=[0, 0, 100],
                 )
             )
 
-        return catalog[:6]  # Explicitly enforce 6-SKU limit
+        return catalog[:6]
 
 
 @router.get("/catalog/", tags=["catalog"], response_model=List[CatalogItem])

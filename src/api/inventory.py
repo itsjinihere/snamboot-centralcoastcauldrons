@@ -35,7 +35,7 @@ def get_inventory():
         row = connection.execute(
             sqlalchemy.text(
                 """
-                SELECT gold, red_ml, green_ml, blue_ml, dark_ml,
+                SELECT gold, red_ml, green_ml, blue_ml,
                        red_potions, green_potions, blue_potions
                 FROM global_inventory
                 LIMIT 1
@@ -46,7 +46,7 @@ def get_inventory():
         if row is None:
             raise RuntimeError("No inventory row found")
 
-        total_ml = row.red_ml + row.green_ml + row.blue_ml + row.dark_ml
+        total_ml = row.red_ml + row.green_ml + row.blue_ml
         total_potions = row.red_potions + row.green_potions + row.blue_potions
 
         return InventoryAudit(

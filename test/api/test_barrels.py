@@ -13,14 +13,14 @@ def test_barrel_delivery() -> None:
         Barrel(
             sku="SMALL_RED_BARREL",
             ml_per_barrel=1000,
-            potion_type=[1.0, 0, 0, 0],
+            potion_type=[1.0, 0, 0],
             price=100,
             quantity=10,
         ),
         Barrel(
             sku="SMALL_GREEN_BARREL",
             ml_per_barrel=1000,
-            potion_type=[0, 1.0, 0, 0],
+            potion_type=[0, 1.0, 0],
             price=150,
             quantity=5,
         ),
@@ -36,21 +36,21 @@ def test_buy_small_red_barrel_plan(mock_choice) -> None:
         Barrel(
             sku="SMALL_RED_BARREL",
             ml_per_barrel=1000,
-            potion_type=[1.0, 0, 0, 0],
+            potion_type=[1.0, 0, 0],
             price=100,
             quantity=10,
         ),
         Barrel(
             sku="SMALL_GREEN_BARREL",
             ml_per_barrel=1000,
-            potion_type=[0, 1.0, 0, 0],
+            potion_type=[0, 1.0, 0],
             price=150,
             quantity=5,
         ),
         Barrel(
             sku="SMALL_BLUE_BARREL",
             ml_per_barrel=1000,
-            potion_type=[0, 0, 1.0, 0],
+            potion_type=[0, 0, 1.0],
             price=500,
             quantity=2,
         ),
@@ -61,7 +61,6 @@ def test_buy_small_red_barrel_plan(mock_choice) -> None:
     current_red_ml = 0
     current_green_ml = 1000
     current_blue_ml = 1000
-    current_dark_ml = 1000
     red_potions = 0
     green_potions = 0
     blue_potions = 0
@@ -72,7 +71,6 @@ def test_buy_small_red_barrel_plan(mock_choice) -> None:
         current_red_ml,
         current_green_ml,
         current_blue_ml,
-        current_dark_ml,
         red_potions,
         green_potions,
         blue_potions,
@@ -91,21 +89,21 @@ def test_cant_afford_barrel_plan() -> None:
         Barrel(
             sku="SMALL_RED_BARREL",
             ml_per_barrel=1000,
-            potion_type=[1.0, 0, 0, 0],
+            potion_type=[1.0, 0, 0],
             price=100,
             quantity=10,
         ),
         Barrel(
             sku="SMALL_GREEN_BARREL",
             ml_per_barrel=1000,
-            potion_type=[0, 1.0, 0, 0],
+            potion_type=[0, 1.0, 0],
             price=150,
             quantity=5,
         ),
         Barrel(
             sku="SMALL_BLUE_BARREL",
             ml_per_barrel=1000,
-            potion_type=[0, 0, 1.0, 0],
+            potion_type=[0, 0, 1.0],
             price=500,
             quantity=2,
         ),
@@ -116,7 +114,6 @@ def test_cant_afford_barrel_plan() -> None:
     current_red_ml = 0
     current_green_ml = 1000
     current_blue_ml = 1000
-    current_dark_ml = 1000
     red_potions = 0
     green_potions = 0
     blue_potions = 0
@@ -127,7 +124,6 @@ def test_cant_afford_barrel_plan() -> None:
         current_red_ml,
         current_green_ml,
         current_blue_ml,
-        current_dark_ml,
         red_potions,
         green_potions,
         blue_potions,

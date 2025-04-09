@@ -19,9 +19,9 @@ class Barrel(BaseModel):
     ml_per_barrel: int = Field(gt=0, description="Must be greater than 0")
     potion_type: List[float] = Field(
         ...,
-        min_length=4,
-        max_length=4,
-        description="Must contain exactly 4 elements: [r, g, b, d] that sum to 1.0",
+        min_length=3,
+        max_length=3,
+        description="Must contain exactly 3 elements: [r, g, b] that sum to 1.0",
     )
     price: int = Field(ge=0, description="Price must be non-negative")
     quantity: int = Field(ge=0, description="Quantity must be non-negative")
@@ -29,8 +29,8 @@ class Barrel(BaseModel):
     @field_validator("potion_type")
     @classmethod
     def validate_potion_type(cls, potion_type: List[float]) -> List[float]:
-        if len(potion_type) != 4:
-            raise ValueError("potion_type must have exactly 4 elements: [r, g, b, d]")
+        if len(potion_type) != 3:
+            raise ValueError("potion_type must have exactly 3 elements: [r, g, b]")
         if not abs(sum(potion_type) - 1.0) < 1e-6:
             raise ValueError("Sum of potion_type values must be exactly 1.0")
         return potion_type
@@ -60,7 +60,6 @@ def post_deliver_barrels(barrels_delivered: List[Barrel], order_id: int):
         "red_ml": 0.0,
         "green_ml": 0.0,
         "blue_ml": 0.0,
-        "dark_ml": 0.0,
     }
 
     for barrel in barrels_delivered:
@@ -68,7 +67,6 @@ def post_deliver_barrels(barrels_delivered: List[Barrel], order_id: int):
         ml_totals["red_ml"] += total_ml * barrel.potion_type[0]
         ml_totals["green_ml"] += total_ml * barrel.potion_type[1]
         ml_totals["blue_ml"] += total_ml * barrel.potion_type[2]
-        ml_totals["dark_ml"] += total_ml * barrel.potion_type[3]
 
     with db.engine.begin() as connection:
         connection.execute(
@@ -79,8 +77,7 @@ def post_deliver_barrels(barrels_delivered: List[Barrel], order_id: int):
                     gold = gold - :gold_paid,
                     red_ml = red_ml + :red_ml,
                     green_ml = green_ml + :green_ml,
-                    blue_ml = blue_ml + :blue_ml,
-                    dark_ml = dark_ml + :dark_ml
+                    blue_ml = blue_ml + :blue_ml
                 """
             ),
             {
@@ -88,7 +85,6 @@ def post_deliver_barrels(barrels_delivered: List[Barrel], order_id: int):
                 "red_ml": int(ml_totals["red_ml"]),
                 "green_ml": int(ml_totals["green_ml"]),
                 "blue_ml": int(ml_totals["blue_ml"]),
-                "dark_ml": int(ml_totals["dark_ml"]),
             },
         )
 
@@ -99,7 +95,6 @@ def create_barrel_plan(
     current_red_ml: int,
     current_green_ml: int,
     current_blue_ml: int,
-    current_dark_ml: int,
     red_potions: int,
     green_potions: int,
     blue_potions: int,
@@ -108,7 +103,7 @@ def create_barrel_plan(
     print(
         f"gold: {gold}, max_barrel_capacity: {max_barrel_capacity}, "
         f"current_red_ml: {current_red_ml}, current_green_ml: {current_green_ml}, "
-        f"current_blue_ml: {current_blue_ml}, current_dark_ml: {current_dark_ml}, "
+        f"current_blue_ml: {current_blue_ml}, "
         f"red_potions: {red_potions}, green_potions: {green_potions}, blue_potions: {blue_potions}, "
         f"wholesale_catalog: {wholesale_catalog}"
     )
@@ -129,10 +124,7 @@ def create_barrel_plan(
 
     cheapest_barrel = min(matching_barrels, key=lambda b: b.price, default=None)
 
-    # ✅ New logic with capacity check
-    current_capacity = (
-        current_red_ml + current_green_ml + current_blue_ml + current_dark_ml
-    )
+    current_capacity = current_red_ml + current_green_ml + current_blue_ml
 
     if (
         cheapest_barrel
@@ -152,7 +144,7 @@ def get_wholesale_purchase_plan(wholesale_catalog: List[Barrel]):
         row = connection.execute(
             sqlalchemy.text(
                 """
-                SELECT gold, red_ml, green_ml, blue_ml, dark_ml,
+                SELECT gold, red_ml, green_ml, blue_ml,
                        red_potions, green_potions, blue_potions
                 FROM global_inventory
                 """
@@ -165,7 +157,6 @@ def get_wholesale_purchase_plan(wholesale_catalog: List[Barrel]):
         current_red_ml=row.red_ml,
         current_green_ml=row.green_ml,
         current_blue_ml=row.blue_ml,
-        current_dark_ml=row.dark_ml,
         red_potions=row.red_potions,
         green_potions=row.green_potions,
         blue_potions=row.blue_potions,
