@@ -167,7 +167,6 @@ def create_bottle_plan(
     return potion_plan
 
 
-
 @router.post("/plan", response_model=List[PotionMixes])
 def get_bottle_plan():
     with db.engine.begin() as connection:
