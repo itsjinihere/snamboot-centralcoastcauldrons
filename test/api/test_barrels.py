@@ -1,3 +1,4 @@
+from unittest.mock import patch
 from src.api.barrels import (
     calculate_barrel_summary,
     create_barrel_plan,
@@ -5,6 +6,7 @@ from src.api.barrels import (
     BarrelOrder,
 )
 from typing import List
+
 
 
 def test_barrel_delivery() -> None:
@@ -26,11 +28,11 @@ def test_barrel_delivery() -> None:
     ]
 
     delivery_summary = calculate_barrel_summary(delivery)
-
     assert delivery_summary.gold_paid == 1750
 
 
-def test_buy_small_red_barrel_plan() -> None:
+@patch("src.api.barrels.random.choice", return_value="red")  # 👈 This is the patch
+def test_buy_small_red_barrel_plan(mock_choice) -> None:
     wholesale_catalog: List[Barrel] = [
         Barrel(
             sku="SMALL_RED_BARREL",
