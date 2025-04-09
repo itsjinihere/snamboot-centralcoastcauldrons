@@ -8,7 +8,6 @@ from src.api.barrels import (
 from typing import List
 
 
-
 def test_barrel_delivery() -> None:
     delivery: List[Barrel] = [
         Barrel(
