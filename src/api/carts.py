@@ -109,7 +109,9 @@ def create_cart(new_cart: Customer):
                 "level": new_cart.level,
             },
         )
-        cart_id = result.scalar_one_or_none()  # Using scalar_one_or_none to handle no results
+        cart_id = (
+            result.scalar_one_or_none()
+        )  # Using scalar_one_or_none to handle no results
 
     if cart_id is None:
         raise HTTPException(status_code=500, detail="Failed to create cart")

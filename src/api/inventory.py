@@ -79,6 +79,7 @@ def deliver_capacity_plan(capacity_purchase: CapacityPlan, order_id: int):
     print(f"capacity delivered: {capacity_purchase} order_id: {order_id}")
     pass
 
+
 @router.post("/seed_inventory", tags=["admin"])
 def seed_inventory():
     with db.engine.begin() as connection:
@@ -104,4 +105,3 @@ def seed_inventory():
         )
 
     return {"message": "Seeded global_inventory with initial values!"}
-

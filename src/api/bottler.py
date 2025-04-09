@@ -178,4 +178,3 @@ def get_bottle_plan():
         maximum_potion_capacity=50,
         current_potion_inventory=[],
     )
-

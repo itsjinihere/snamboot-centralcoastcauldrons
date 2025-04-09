@@ -164,4 +164,3 @@ def get_wholesale_purchase_plan(wholesale_catalog: List[Barrel]):
         blue_potions=row.blue_potions,
         wholesale_catalog=wholesale_catalog,
     )
-
