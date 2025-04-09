@@ -1,8 +1,14 @@
 from logging.config import fileConfig
 import os
+import sys
+from src.api.models import Base
+
 
 from sqlalchemy import engine_from_config, pool
 from alembic import context
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+
 
 # Alembic Config object
 config = context.config
@@ -20,8 +26,8 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Import your metadata (for `--autogenerate`)
-# from app.db import Base
-target_metadata = None  # or Base.metadata
+
+target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
