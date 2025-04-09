@@ -43,6 +43,9 @@ def get_inventory():
             )
         ).first()
 
+        if row is None:
+            raise RuntimeError("No inventory row found")
+
         total_ml = row.red_ml + row.green_ml + row.blue_ml + row.dark_ml
         total_potions = (
             row.red_potions + row.green_potions + row.blue_potions + row.dark_potions
