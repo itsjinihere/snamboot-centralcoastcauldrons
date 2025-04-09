@@ -51,15 +51,20 @@ def search_orders(
     with db.engine.begin() as connection:
         results = connection.execute(
             sqlalchemy.text(f"""
-                SELECT id, customer_name, item_sku, line_item_total, created_at
-                FROM cart_items
-                WHERE customer_name ILIKE :customer_name
-                  AND item_sku ILIKE :potion_sku
+                SELECT ci.id, c.customer_name, ci.item_sku, ci.line_item_total, ci.created_at
+                FROM cart_items ci
+                JOIN carts c ON ci.cart_id = c.id
+                WHERE c.customer_name ILIKE :customer_name
+                  AND ci.item_sku ILIKE :potion_sku
                 ORDER BY {sort_col.value} {sort_order.value.upper()}
                 LIMIT 50
             """),
             {"customer_name": f"%{customer_name}%", "potion_sku": f"%{potion_sku}%"},
         ).fetchall()
+
+        # Handling the case where no results are found gracefully
+        if not results:
+            return SearchResponse(previous=None, next=None, results=[])
 
         return SearchResponse(
             previous=None,
@@ -104,7 +109,10 @@ def create_cart(new_cart: Customer):
                 "level": new_cart.level,
             },
         )
-        cart_id = result.scalar_one()
+        cart_id = result.scalar_one_or_none()  # Using scalar_one_or_none to handle no results
+
+    if cart_id is None:
+        raise HTTPException(status_code=500, detail="Failed to create cart")
 
     return CartCreateResponse(cart_id=cart_id)
 

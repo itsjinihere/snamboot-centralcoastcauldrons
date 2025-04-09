@@ -78,3 +78,30 @@ def deliver_capacity_plan(capacity_purchase: CapacityPlan, order_id: int):
     """
     print(f"capacity delivered: {capacity_purchase} order_id: {order_id}")
     pass
+
+@router.post("/seed_inventory", tags=["admin"])
+def seed_inventory():
+    with db.engine.begin() as connection:
+        row = connection.execute(
+            sqlalchemy.text("SELECT COUNT(*) FROM global_inventory")
+        ).scalar_one()
+
+        if row > 0:
+            return {"message": "Already seeded."}
+
+        connection.execute(
+            sqlalchemy.text(
+                """
+                INSERT INTO global_inventory (
+                    id, gold, red_ml, green_ml, blue_ml,
+                    red_potions, green_potions, blue_potions
+                ) VALUES (
+                    1, 1000, 1000, 1000, 1000,
+                    10, 10, 10
+                )
+                """
+            )
+        )
+
+    return {"message": "Seeded global_inventory with initial values!"}
+

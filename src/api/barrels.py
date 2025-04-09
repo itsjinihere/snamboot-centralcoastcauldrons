@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, HTTPException
 from pydantic import BaseModel, Field, field_validator
 from typing import List
 import random
@@ -136,7 +136,6 @@ def create_barrel_plan(
     return []
 
 
-@router.post("/plan", response_model=List[BarrelOrder])
 def get_wholesale_purchase_plan(wholesale_catalog: List[Barrel]):
     print(f"barrel catalog: {wholesale_catalog}")
 
@@ -149,7 +148,10 @@ def get_wholesale_purchase_plan(wholesale_catalog: List[Barrel]):
                 FROM global_inventory
                 """
             )
-        ).one()
+        ).first()  # Changed to .first()
+
+    if not row:
+        raise HTTPException(status_code=404, detail="No inventory row found")
 
     return create_barrel_plan(
         gold=row.gold,
@@ -162,3 +164,4 @@ def get_wholesale_purchase_plan(wholesale_catalog: List[Barrel]):
         blue_potions=row.blue_potions,
         wholesale_catalog=wholesale_catalog,
     )
+

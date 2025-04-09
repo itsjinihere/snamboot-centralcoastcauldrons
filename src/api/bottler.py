@@ -162,7 +162,11 @@ def get_bottle_plan():
                 FROM global_inventory
                 """
             )
-        ).one()
+        ).first()  # Use .first() instead of .one()
+
+    if not row:
+        # If no row is returned, handle it (e.g., return an empty plan or error)
+        return []
 
     return create_bottle_plan(
         red_ml=row.red_ml,
@@ -174,3 +178,4 @@ def get_bottle_plan():
         maximum_potion_capacity=50,
         current_potion_inventory=[],
     )
+
