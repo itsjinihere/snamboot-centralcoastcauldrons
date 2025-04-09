@@ -27,7 +27,10 @@ def create_catalog() -> List[CatalogItem]:
                 SELECT red_potions, green_potions, blue_potions
                 FROM global_inventory
             """)
-        ).one()
+        ).first()
+
+        if not row:
+            return []  # Prevents mypy error + runtime crash
 
         catalog = []
 

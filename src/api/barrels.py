@@ -129,7 +129,16 @@ def create_barrel_plan(
 
     cheapest_barrel = min(matching_barrels, key=lambda b: b.price, default=None)
 
-    if cheapest_barrel and cheapest_barrel.price <= gold:
+    # ✅ New logic with capacity check
+    current_capacity = (
+        current_red_ml + current_green_ml + current_blue_ml + current_dark_ml
+    )
+
+    if (
+        cheapest_barrel
+        and cheapest_barrel.price <= gold
+        and current_capacity + cheapest_barrel.ml_per_barrel <= max_barrel_capacity
+    ):
         return [BarrelOrder(sku=cheapest_barrel.sku, quantity=1)]
 
     return []

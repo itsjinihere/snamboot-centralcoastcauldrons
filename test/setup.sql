@@ -6,5 +6,16 @@ CREATE TABLE IF NOT EXISTS global_inventory (
     dark_ml INTEGER DEFAULT 0,
     red_potions INTEGER DEFAULT 0,
     green_potions INTEGER DEFAULT 0,
-    blue_potions INTEGER DEFAULT 0
+    blue_potions INTEGER DEFAULT 0,
+    dark_potions INTEGER DEFAULT 0
+);
+
+DELETE FROM global_inventory;
+
+INSERT INTO global_inventory (
+    gold, red_ml, green_ml, blue_ml, dark_ml,
+    red_potions, green_potions, blue_potions, dark_potions
+) VALUES (
+    1000, 1000, 1000, 1000, 1000,
+    10, 10, 10, 10
 );

@@ -5,6 +5,7 @@ from src.api import auth
 import sqlalchemy
 from src import database as db
 import random
+from typing import List, Optional
 
 router = APIRouter(
     prefix="/bottler",
@@ -93,16 +94,56 @@ def post_deliver_bottles(potions_delivered: List[PotionMixes], order_id: int):
 
 
 def create_bottle_plan(
-    red_ml: int,
-    green_ml: int,
-    blue_ml: int,
-    dark_ml: int,
-    red_potions: int,
-    green_potions: int,
-    blue_potions: int,
-    maximum_potion_capacity: int,
-    current_potion_inventory: List[PotionMixes],
+    red_ml: Optional[int] = None,
+    green_ml: Optional[int] = None,
+    blue_ml: Optional[int] = None,
+    dark_ml: Optional[int] = None,
+    red_potions: Optional[int] = None,
+    green_potions: Optional[int] = None,
+    blue_potions: Optional[int] = None,
+    maximum_potion_capacity: int = 50,
+    current_potion_inventory: List[PotionMixes] = [],
 ) -> List[PotionMixes]:
+    # If values not provided, fetch from database
+    if None in [
+        red_ml,
+        green_ml,
+        blue_ml,
+        dark_ml,
+        red_potions,
+        green_potions,
+        blue_potions,
+    ]:
+        with db.engine.begin() as connection:
+            row = connection.execute(
+                sqlalchemy.text("""
+                    SELECT red_ml, green_ml, blue_ml, dark_ml,
+                           red_potions, green_potions, blue_potions
+                    FROM global_inventory
+                    LIMIT 1
+                """)
+            ).first()
+
+        if not row:
+            return []
+
+        red_ml = row.red_ml
+        green_ml = row.green_ml
+        blue_ml = row.blue_ml
+        dark_ml = row.dark_ml
+        red_potions = row.red_potions
+        green_potions = row.green_potions
+        blue_potions = row.blue_potions
+
+    # Mypy-safe asserts
+    assert red_ml is not None
+    assert green_ml is not None
+    assert blue_ml is not None
+    assert dark_ml is not None
+    assert red_potions is not None
+    assert green_potions is not None
+    assert blue_potions is not None
+
     potion_plan = []
     bottle_volume = 50
     low_stock = []
@@ -125,6 +166,7 @@ def create_bottle_plan(
             )
 
     return potion_plan
+
 
 
 @router.post("/plan", response_model=List[PotionMixes])
