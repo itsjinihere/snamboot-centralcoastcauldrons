@@ -13,6 +13,7 @@ router = APIRouter(
     dependencies=[Depends(auth.get_api_key)],
 )
 
+
 class SearchSortOptions(str, Enum):
     customer_name = "customer_name"
     item_sku = "item_sku"
@@ -81,7 +82,6 @@ def search_orders(
         )
 
 
-
 class Customer(BaseModel):
     customer_id: str
     customer_name: str
@@ -141,7 +141,6 @@ def set_item_quantity(cart_id: int, item_sku: str, cart_item: CartItem):
                 "now": datetime.utcnow(),  # Ensure this gets set properly
             },
         )
-
 
 
 class CheckoutResponse(BaseModel):

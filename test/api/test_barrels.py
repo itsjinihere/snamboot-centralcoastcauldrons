@@ -80,7 +80,9 @@ def test_buy_small_red_barrel_plan(mock_choice) -> None:
     assert isinstance(barrel_orders, list)
     assert all(isinstance(order, BarrelOrder) for order in barrel_orders)
     assert len(barrel_orders) > 0
-    assert barrel_orders[0].item_sku == "SMALL_RED_BARREL"  # Changed from sku to item_sku
+    assert (
+        barrel_orders[0].item_sku == "SMALL_RED_BARREL"
+    )  # Changed from sku to item_sku
     assert barrel_orders[0].quantity == 1
 
 

@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
 from src.database import Base
 from datetime import datetime
 
+
 class GlobalInventory(Base):
     __tablename__ = "global_inventory"
     id = Column(Integer, primary_key=True)
@@ -26,7 +27,9 @@ class Cart(Base):
 class CartItem(Base):
     __tablename__ = "cart_items"
     id = Column(Integer, primary_key=True)
-    cart_id = Column(Integer, ForeignKey("carts.customer_id"), nullable=False)  # Updated to 'customer_id'
+    cart_id = Column(
+        Integer, ForeignKey("carts.customer_id"), nullable=False
+    )  # Updated to 'customer_id'
     item_sku = Column(String, nullable=False)  # Changed from 'sku' to 'item_sku'
     quantity = Column(Integer, nullable=False)
     unit_price = Column(Integer, nullable=False)

@@ -12,6 +12,7 @@ from src.api.catalog import create_catalog
 from src.api.inventory import get_inventory
 from src.api.carts import Customer
 
+
 # ----- TEST DATABASE SETUP -----
 @pytest.fixture(scope="session", autouse=True)
 def setup_database():
@@ -124,8 +125,6 @@ def test_checkout_calculation():
     assert total == 250
 
 
-
-
 # Test creating a cart
 def test_create_cart():
     new_cart = Customer(
@@ -134,7 +133,7 @@ def test_create_cart():
         character_class="Warrior",  # New field
         level=5,  # New field
     )
-    
+
     # Simulating a post to the /carts/ endpoint
     response = new_cart.dict()  # Simulate the expected response
     assert "customer_id" in response
