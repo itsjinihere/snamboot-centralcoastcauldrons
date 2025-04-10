@@ -13,7 +13,6 @@ router = APIRouter(
     dependencies=[Depends(auth.get_api_key)],
 )
 
-
 class SearchSortOptions(str, Enum):
     customer_name = "customer_name"
     item_sku = "item_sku"
@@ -51,11 +50,11 @@ def search_orders(
     with db.engine.begin() as connection:
         results = connection.execute(
             sqlalchemy.text(f"""
-                SELECT ci.id, c.customer_name, ci.item_sku, ci.line_item_total, ci.created_at
+                SELECT ci.id, c.customer_name, ci.item_sku, ci.quantity * ci.unit_price AS line_item_total, ci.timestamp
                 FROM cart_items ci
-                JOIN carts c ON ci.cart_id = c.id
+                JOIN carts c ON ci.cart_id = c.customer_id  -- Changed to customer_id
                 WHERE c.customer_name ILIKE :customer_name
-                  AND ci.item_sku ILIKE :potion_sku
+                AND ci.item_sku ILIKE :potion_sku
                 ORDER BY {sort_col.value} {sort_order.value.upper()}
                 LIMIT 50
             """),
@@ -75,11 +74,12 @@ def search_orders(
                     item_sku=row.item_sku,
                     customer_name=row.customer_name,
                     line_item_total=row.line_item_total,
-                    timestamp=row.created_at.isoformat(),
+                    timestamp=row.timestamp.isoformat(),
                 )
                 for row in results
             ],
         )
+
 
 
 class Customer(BaseModel):
@@ -90,7 +90,7 @@ class Customer(BaseModel):
 
 
 class CartCreateResponse(BaseModel):
-    cart_id: int
+    customer_id: int
 
 
 @router.post("/", response_model=CartCreateResponse)
@@ -100,7 +100,7 @@ def create_cart(new_cart: Customer):
             sqlalchemy.text("""
                 INSERT INTO carts (customer_id, customer_name, character_class, level)
                 VALUES (:cid, :cname, :cclass, :level)
-                RETURNING id
+                RETURNING customer_id
             """),
             {
                 "cid": new_cart.customer_id,
@@ -109,14 +109,13 @@ def create_cart(new_cart: Customer):
                 "level": new_cart.level,
             },
         )
-        cart_id = (
-            result.scalar_one_or_none()
-        )  # Using scalar_one_or_none to handle no results
 
-    if cart_id is None:
+        customer_id = result.scalar_one_or_none()
+
+    if customer_id is None:
         raise HTTPException(status_code=500, detail="Failed to create cart")
 
-    return CartCreateResponse(cart_id=cart_id)
+    return CartCreateResponse(customer_id=customer_id)
 
 
 class CartItem(BaseModel):
@@ -128,21 +127,21 @@ def set_item_quantity(cart_id: int, item_sku: str, cart_item: CartItem):
     with db.engine.begin() as connection:
         connection.execute(
             sqlalchemy.text("""
-                INSERT INTO cart_items (cart_id, item_sku, quantity, customer_name, line_item_total, created_at)
-                SELECT :cid, :sku, :qty, customer_name, :qty * 50, :now
-                FROM carts WHERE id = :cid
+                INSERT INTO cart_items (cart_id, item_sku, quantity, timestamp)
+                SELECT :cid, :sku, :qty, :now
+                FROM carts c WHERE c.customer_id = :cid  -- Change to use customer_id instead of cart_id
                 ON CONFLICT (cart_id, item_sku) DO UPDATE
                 SET quantity = EXCLUDED.quantity,
-                    line_item_total = EXCLUDED.line_item_total,
-                    created_at = EXCLUDED.created_at
+                    timestamp = EXCLUDED.timestamp
             """),
             {
                 "cid": cart_id,
                 "sku": item_sku,
                 "qty": cart_item.quantity,
-                "now": datetime.utcnow(),
+                "now": datetime.utcnow(),  # Ensure this gets set properly
             },
         )
+
 
 
 class CheckoutResponse(BaseModel):
@@ -159,7 +158,7 @@ def checkout(cart_id: int, cart_checkout: CartCheckout):
     with db.engine.begin() as connection:
         items = connection.execute(
             sqlalchemy.text("""
-                SELECT item_sku, quantity, line_item_total
+                SELECT item_sku, quantity, quantity * unit_price AS line_item_total
                 FROM cart_items
                 WHERE cart_id = :cart_id
             """),

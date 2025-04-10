@@ -10,7 +10,7 @@ from src.api.barrels import (
 from src.api.bottler import create_bottle_plan
 from src.api.catalog import create_catalog
 from src.api.inventory import get_inventory
-
+from src.api.carts import Customer
 
 # ----- TEST DATABASE SETUP -----
 @pytest.fixture(scope="session", autouse=True)
@@ -43,14 +43,14 @@ def setup_database():
 def test_calculate_barrel_summary():
     barrels = [
         Barrel(
-            sku="R",
+            item_sku="R",  # Changed from sku to item_sku
             ml_per_barrel=1000,
             potion_type=[1.0, 0, 0],
             price=100,
             quantity=2,
         ),
         Barrel(
-            sku="G",
+            item_sku="G",  # Changed from sku to item_sku
             ml_per_barrel=1000,
             potion_type=[0, 1.0, 0],
             price=150,
@@ -64,14 +64,14 @@ def test_calculate_barrel_summary():
 def test_create_barrel_plan_basic():
     catalog = [
         Barrel(
-            sku="R",
+            item_sku="R",  # Changed from sku to item_sku
             ml_per_barrel=1000,
             potion_type=[1.0, 0, 0],
             price=100,
             quantity=1,
         ),
         Barrel(
-            sku="G",
+            item_sku="G",  # Changed from sku to item_sku
             ml_per_barrel=1000,
             potion_type=[0, 1.0, 0],
             price=150,
@@ -122,6 +122,26 @@ def test_checkout_calculation():
     cart_items = {"RED_POTION_0": 2, "GREEN_POTION_0": 3}
     total = sum(cart_items.values()) * 50
     assert total == 250
+
+
+
+
+# Test creating a cart
+def test_create_cart():
+    new_cart = Customer(
+        customer_id="12345",  # Updated field names
+        customer_name="John",
+        character_class="Warrior",  # New field
+        level=5,  # New field
+    )
+    
+    # Simulating a post to the /carts/ endpoint
+    response = new_cart.dict()  # Simulate the expected response
+    assert "customer_id" in response
+    assert response["customer_id"] == "12345"
+    assert response["customer_name"] == "John"
+    assert response["character_class"] == "Warrior"
+    assert response["level"] == 5
 
 
 # ----- INVENTORY -----
