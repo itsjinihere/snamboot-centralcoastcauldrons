@@ -141,7 +141,7 @@ def create_barrel_plan(
 
     return []
 
-
+@router.post("/plan", response_model=List[BarrelOrder])
 def get_wholesale_purchase_plan(wholesale_catalog: List[Barrel]):
     print(f"barrel catalog: {wholesale_catalog}")
 
