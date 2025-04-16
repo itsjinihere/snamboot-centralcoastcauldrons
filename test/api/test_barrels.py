@@ -11,16 +11,16 @@ from typing import List
 def test_barrel_delivery() -> None:
     delivery: List[Barrel] = [
         Barrel(
-            item_sku="SMALL_RED_BARREL",  # Changed from sku to item_sku
+            sku="SMALL_RED_BARREL",  # Changed from sku to item_sku
             ml_per_barrel=1000,
-            potion_type=[1.0, 0, 0],
+            potion_type=[1.0, 0, 0, 0],
             price=100,
             quantity=10,
         ),
         Barrel(
-            item_sku="SMALL_GREEN_BARREL",  # Changed from sku to item_sku
+            sku="SMALL_GREEN_BARREL",  # Changed from sku to item_sku
             ml_per_barrel=1000,
-            potion_type=[0, 1.0, 0],
+            potion_type=[0, 1.0, 0, 0],
             price=150,
             quantity=5,
         ),
@@ -34,23 +34,23 @@ def test_barrel_delivery() -> None:
 def test_buy_small_red_barrel_plan(mock_choice) -> None:
     wholesale_catalog: List[Barrel] = [
         Barrel(
-            item_sku="SMALL_RED_BARREL",  # Changed from sku to item_sku
+            sku="SMALL_RED_BARREL",  # Changed from sku to item_sku
             ml_per_barrel=1000,
-            potion_type=[1.0, 0, 0],
+            potion_type=[1.0, 0, 0, 0],
             price=100,
             quantity=10,
         ),
         Barrel(
-            item_sku="SMALL_GREEN_BARREL",  # Changed from sku to item_sku
+            sku="SMALL_GREEN_BARREL",  # Changed from sku to item_sku
             ml_per_barrel=1000,
-            potion_type=[0, 1.0, 0],
+            potion_type=[0, 1.0, 0, 0],
             price=150,
             quantity=5,
         ),
         Barrel(
-            item_sku="SMALL_BLUE_BARREL",  # Changed from sku to item_sku
+            sku="SMALL_BLUE_BARREL",  # Changed from sku to item_sku
             ml_per_barrel=1000,
-            potion_type=[0, 0, 1.0],
+            potion_type=[0, 0, 1.0, 0],
             price=500,
             quantity=2,
         ),
@@ -81,7 +81,7 @@ def test_buy_small_red_barrel_plan(mock_choice) -> None:
     assert all(isinstance(order, BarrelOrder) for order in barrel_orders)
     assert len(barrel_orders) > 0
     assert (
-        barrel_orders[0].item_sku == "SMALL_RED_BARREL"
+        barrel_orders[0].sku == "SMALL_RED_BARREL"
     )  # Changed from sku to item_sku
     assert barrel_orders[0].quantity == 1
 
@@ -89,23 +89,23 @@ def test_buy_small_red_barrel_plan(mock_choice) -> None:
 def test_cant_afford_barrel_plan() -> None:
     wholesale_catalog: List[Barrel] = [
         Barrel(
-            item_sku="SMALL_RED_BARREL",  # Changed from sku to item_sku
+            sku="SMALL_RED_BARREL",  # Changed from sku to item_sku
             ml_per_barrel=1000,
-            potion_type=[1.0, 0, 0],
+            potion_type=[1.0, 0, 0, 0],
             price=100,
             quantity=10,
         ),
         Barrel(
-            item_sku="SMALL_GREEN_BARREL",  # Changed from sku to item_sku
+            sku="SMALL_GREEN_BARREL",  # Changed from sku to item_sku
             ml_per_barrel=1000,
-            potion_type=[0, 1.0, 0],
+            potion_type=[0, 1.0, 0, 0],
             price=150,
             quantity=5,
         ),
         Barrel(
-            item_sku="SMALL_BLUE_BARREL",  # Changed from sku to item_sku
+            sku="SMALL_BLUE_BARREL",  # Changed from sku to item_sku
             ml_per_barrel=1000,
-            potion_type=[0, 0, 1.0],
+            potion_type=[0, 0, 1.0, 0],
             price=500,
             quantity=2,
         ),

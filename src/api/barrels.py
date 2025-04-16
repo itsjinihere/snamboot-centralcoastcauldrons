@@ -16,7 +16,7 @@ router = APIRouter(
 
 
 class Barrel(BaseModel):
-    item_sku: str  # Changed from 'sku' to 'item_sku'
+    sku: str  
     ml_per_barrel: int = Field(gt=0, description="Must be greater than 0")
     potion_type: List[float] = Field(
         ...,
@@ -41,7 +41,7 @@ class Barrel(BaseModel):
 
 
 class BarrelOrder(BaseModel):
-    item_sku: str  # Changed from 'sku' to 'item_sku'
+    sku: str  # Changed from 'sku' to 'item_sku'
     quantity: int = Field(gt=0, description="Quantity must be greater than 0")
 
 
@@ -136,7 +136,7 @@ def create_barrel_plan(
         and current_capacity + cheapest_barrel.ml_per_barrel <= max_barrel_capacity
     ):
         return [
-            BarrelOrder(item_sku=cheapest_barrel.item_sku, quantity=1)
+            BarrelOrder(sku=cheapest_barrel.sku, quantity=1)
         ]  # Updated to item_sku
 
     return []
