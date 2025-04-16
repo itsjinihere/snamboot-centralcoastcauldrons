@@ -20,8 +20,8 @@ class Barrel(BaseModel):
     ml_per_barrel: int = Field(gt=0, description="Must be greater than 0")
     potion_type: List[float] = Field(
         ...,
-        min_length=3,
-        max_length=3,
+        min_length=4,
+        max_length=4,
         description="Must contain exactly 3 elements: [r, g, b] that sum to 1.0",
     )
     price: int = Field(ge=0, description="Price must be non-negative")
