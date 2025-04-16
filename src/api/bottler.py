@@ -17,9 +17,9 @@ router = APIRouter(
 class PotionMixes(BaseModel):
     potion_type: List[int] = Field(
         ...,
-        min_length=3,
-        max_length=3,
-        description="Must contain exactly 3 elements: [r, g, b]",
+        min_length=4,
+        max_length=4,
+        description="Must contain exactly 4 elements: [r, g, b, d]",
     )
     quantity: int = Field(
         ..., ge=1, le=10000, description="Quantity must be between 1 and 10,000"

@@ -22,7 +22,7 @@ class Barrel(BaseModel):
         ...,
         min_length=4,
         max_length=4,
-        description="Must contain exactly 3 elements: [r, g, b] that sum to 1.0",
+        description="Must contain exactly 4 elements: [r, g, b, d] that sum to 1.0",
     )
     price: int = Field(ge=0, description="Price must be non-negative")
     quantity: int = Field(ge=0, description="Quantity must be non-negative")
@@ -33,8 +33,8 @@ class Barrel(BaseModel):
     @field_validator("potion_type")
     @classmethod
     def validate_potion_type(cls, potion_type: List[float]) -> List[float]:
-        if len(potion_type) != 3:
-            raise ValueError("potion_type must have exactly 3 elements: [r, g, b]")
+        if len(potion_type) != 4:
+            raise ValueError("potion_type must have exactly 4 elements: [r, g, b, d]")
         if not abs(sum(potion_type) - 1.0) < 1e-6:
             raise ValueError("Sum of potion_type values must be exactly 1.0")
         return potion_type

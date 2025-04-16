@@ -14,9 +14,9 @@ class CatalogItem(BaseModel):
     price: Annotated[int, Field(ge=1, le=500)]
     potion_type: List[int] = Field(
         ...,
-        min_length=3,
-        max_length=3,
-        description="Must contain exactly 3 elements: [r, g, b]",
+        min_length=4,
+        max_length=4,
+        description="Must contain exactly 4 elements: [r, g, b, d]",
     )
 
 
@@ -37,7 +37,7 @@ def create_catalog() -> List[CatalogItem]:
 
         def price_for(color: str, base: int) -> int:
             count = getattr(row, f"{color}_potions")
-            if count < 3:
+            if count < 4:
                 return min(base + 10, 500)
             return base
 
