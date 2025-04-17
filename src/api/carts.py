@@ -13,7 +13,7 @@ router = APIRouter(
     dependencies=[Depends(auth.get_api_key)],
 )
 
-
+# ----- ENUMS -----
 class SearchSortOptions(str, Enum):
     customer_name = "customer_name"
     item_sku = "item_sku"
@@ -26,6 +26,7 @@ class SearchSortOrder(str, Enum):
     desc = "desc"
 
 
+# ----- MODELS -----
 class LineItem(BaseModel):
     line_item_id: int
     item_sku: str
@@ -179,6 +180,7 @@ def checkout(cart_id: int, cart_checkout: CartCheckout):
         )
 
         for item in items:
+            # Adjust potion type handling here based on the item_sku
             if item.item_sku.startswith("RED"):
                 connection.execute(
                     sqlalchemy.text("""

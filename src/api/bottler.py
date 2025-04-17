@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, status
-from pydantic import BaseModel, Field, field_validator, root_validator
+from pydantic import BaseModel, Field, root_validator
 from typing import List, Optional
 import sqlalchemy
 import random
@@ -27,12 +27,13 @@ class PotionMixes(BaseModel):
 
     @root_validator(pre=True)
     @classmethod
-    def validate_potion_type(cls, potion_type: List[int]) -> List[int]:
+    def validate_potion_type(cls, values):
+        potion_type = values.get('potion_type')
         if len(potion_type) != 4:
             raise ValueError("Potion type must have exactly 4 elements: [r, g, b, d]")
         if sum(potion_type) != 100:
             raise ValueError("Sum of potion_type values must be exactly 100")
-        return potion_type
+        return values
 
 
 @router.post("/deliver/{order_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -101,82 +102,33 @@ def create_bottle_plan(
     maximum_potion_capacity: int = 50,
     current_potion_inventory: List[PotionMixes] = [],
 ) -> List[PotionMixes]:
-    # If values not provided, fetch from database
-    if None in [red_ml, green_ml, blue_ml, red_potions, green_potions, blue_potions]:
-        with db.engine.begin() as connection:
-            row = connection.execute(
-                sqlalchemy.text("""
-                    SELECT red_ml, green_ml, blue_ml,
-                           red_potions, green_potions, blue_potions
-                    FROM global_inventory
-                    LIMIT 1
-                """)
-            ).first()
-
-        if not row:
-            return []
-
-        red_ml = row.red_ml
-        green_ml = row.green_ml
-        blue_ml = row.blue_ml
-        red_potions = row.red_potions
-        green_potions = row.green_potions
-        blue_potions = row.blue_potions
-
-    # Mypy-safe asserts
-    assert red_ml is not None
-    assert green_ml is not None
-    assert blue_ml is not None
-    assert red_potions is not None
-    assert green_potions is not None
-    assert blue_potions is not None
+    # Fetch potion mixes from database instead of hardcoding
+    with db.engine.begin() as connection:
+        potion_rows = connection.execute(
+            sqlalchemy.text("""
+                SELECT potion_type, quantity
+                FROM potions
+            """)
+        ).fetchall()
 
     potion_plan = []
-    bottle_volume = 50
-    low_stock = []
-
-    if red_potions < 5 and red_ml >= bottle_volume:
-        low_stock.append(("red", [100, 0, 0], red_ml))
-    if green_potions < 5 and green_ml >= bottle_volume:
-        low_stock.append(("green", [0, 100, 0], green_ml))
-    if blue_potions < 5 and blue_ml >= bottle_volume:
-        low_stock.append(("blue", [0, 0, 100], blue_ml))
-
-    if low_stock:
-        color, potion_type, available_ml = random.choice(low_stock)
-        max_quantity = min(available_ml // bottle_volume, 10)
-        if max_quantity >= 1:
-            potion_plan.append(
-                PotionMixes(potion_type=potion_type, quantity=int(max_quantity))
-            )
+    for row in potion_rows:
+        potion_type = row[0]
+        quantity = row[1]
+        potion_plan.append(PotionMixes(potion_type=potion_type, quantity=quantity))
 
     return potion_plan
 
 
 @router.post("/plan", response_model=List[PotionMixes])
 def get_bottle_plan():
-    with db.engine.begin() as connection:
-        row = connection.execute(
-            sqlalchemy.text(
-                """
-                SELECT red_ml, green_ml, blue_ml,
-                       red_potions, green_potions, blue_potions
-                FROM global_inventory
-                """
-            )
-        ).first()  # Use .first() instead of .one()
-
-    if not row:
-        # If no row is returned, handle it (e.g., return an empty plan or error)
-        return []
-
+    # You can adjust this if needed based on other variables
     return create_bottle_plan(
-        red_ml=row.red_ml,
-        green_ml=row.green_ml,
-        blue_ml=row.blue_ml,
-        red_potions=row.red_potions,
-        green_potions=row.green_potions,
-        blue_potions=row.blue_potions,
+        red_ml=100,
+        green_ml=0,
+        blue_ml=0,
+        red_potions=0,
+        green_potions=0,
+        blue_potions=0,
         maximum_potion_capacity=50,
-        current_potion_inventory=[],
     )

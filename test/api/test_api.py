@@ -149,3 +149,175 @@ def test_inventory_audit_values():
     assert inv.gold >= 0
     assert inv.number_of_potions >= 0
     assert inv.ml_in_barrels >= 0
+
+# ----- POTIONS -----
+
+def test_insert_potion():
+    with db.engine.begin() as connection:
+        connection.execute(
+            sqlalchemy.text("""
+                INSERT INTO potions (name, potion_type, quantity, price)
+                VALUES ('Red Potion', '[100, 0, 0, 0]', 10, 50)
+            """)
+        )
+
+    # Check that the potion was inserted correctly
+    result = connection.execute(
+        sqlalchemy.text("""
+            SELECT * FROM potions WHERE name = 'Red Potion'
+        """)
+    ).fetchall()
+
+    assert len(result) == 1
+    assert result[0]["name"] == "Red Potion"
+    assert result[0]["potion_type"] == [100, 0, 0, 0]
+    assert result[0]["quantity"] == 10
+    assert result[0]["price"] == 50
+
+def test_get_potions():
+    with db.engine.begin() as connection:
+        connection.execute(
+            sqlalchemy.text("""
+                INSERT INTO potions (name, potion_type, quantity, price)
+                VALUES ('Blue Potion', '[0, 0, 100, 0]', 15, 70)
+            """)
+        )
+
+    # Retrieve the potion from the database
+    result = connection.execute(
+        sqlalchemy.text("""
+            SELECT * FROM potions WHERE name = 'Blue Potion'
+        """)
+    ).fetchone()
+
+    assert result is not None
+    assert result["name"] == "Blue Potion"
+    assert result["potion_type"] == [0, 0, 100, 0]
+    assert result["quantity"] == 15
+    assert result["price"] == 70
+
+def test_update_potion_quantity():
+    with db.engine.begin() as connection:
+        # Insert a potion with initial quantity
+        connection.execute(
+            sqlalchemy.text("""
+                INSERT INTO potions (name, potion_type, quantity, price)
+                VALUES ('Green Potion', '[0, 100, 0, 0]', 10, 60)
+            """)
+        )
+
+    # Simulate potion delivery (i.e., 5 potions are delivered)
+    with db.engine.begin() as connection:
+        connection.execute(
+            sqlalchemy.text("""
+                UPDATE potions
+                SET quantity = quantity - 5
+                WHERE name = 'Green Potion'
+            """)
+        )
+
+    # Verify that the potion quantity has been updated correctly
+    with db.engine.begin() as connection:
+        result = connection.execute(
+            sqlalchemy.text("""
+                SELECT quantity FROM potions WHERE name = 'Green Potion'
+            """)
+        ).fetchone()
+
+    assert result is not None
+    assert result["quantity"] == 5
+
+def test_potion_type_validation():
+    invalid_potion_type = [200, 0, 0, 0]  # Invalid, sum is not 100
+
+    # Simulate adding a potion with an invalid type
+    with pytest.raises(ValueError):
+        with db.engine.begin() as connection:
+            connection.execute(
+                sqlalchemy.text("""
+                    INSERT INTO potions (name, potion_type, quantity, price)
+                    VALUES ('Invalid Potion', :potion_type, 5, 50)
+                """), {'potion_type': invalid_potion_type}
+            )
+
+def test_catalog_potion_inclusion():
+    with db.engine.begin() as connection:
+        # Insert sample potions into the potions table
+        connection.execute(
+            sqlalchemy.text("""
+                INSERT INTO potions (name, potion_type, quantity, price)
+                VALUES ('Red Potion', '[100, 0, 0, 0]', 10, 50)
+            """)
+        )
+
+    # Fetch the catalog and check that the potion appears
+    catalog = create_catalog()  # Call your existing catalog creation logic
+
+    assert any(item.name == 'Red Potion' for item in catalog)
+    assert any(item.potion_type == [100, 0, 0, 0] for item in catalog)
+    assert any(item.quantity == 10 for item in catalog)
+    assert any(item.price == 50 for item in catalog)
+
+def test_update_potion_price():
+    with db.engine.begin() as connection:
+        # Insert a potion with initial price
+        connection.execute(
+            sqlalchemy.text("""
+                INSERT INTO potions (name, potion_type, quantity, price)
+                VALUES ('Red Potion', '[100, 0, 0, 0]', 10, 50)
+            """)
+        )
+
+    # Simulate updating the price of the potion
+    with db.engine.begin() as connection:
+        connection.execute(
+            sqlalchemy.text("""
+                UPDATE potions
+                SET price = 60
+                WHERE name = 'Red Potion'
+            """)
+        )
+
+    # Verify that the price has been updated correctly
+    with db.engine.begin() as connection:
+        result = connection.execute(
+            sqlalchemy.text("""
+                SELECT price FROM potions WHERE name = 'Red Potion'
+            """)
+        ).fetchone()
+
+    assert result is not None
+    assert result["price"] == 60
+
+def test_inventory_update_after_delivery():
+    with db.engine.begin() as connection:
+        # Insert a potion and simulate delivery
+        connection.execute(
+            sqlalchemy.text("""
+                INSERT INTO potions (name, potion_type, quantity, price)
+                VALUES ('Blue Potion', '[0, 0, 100, 0]', 20, 70)
+            """)
+        )
+
+    # Simulate potion delivery (i.e., 5 potions delivered)
+    with db.engine.begin() as connection:
+        connection.execute(
+            sqlalchemy.text("""
+                UPDATE potions
+                SET quantity = quantity - 5
+                WHERE name = 'Blue Potion'
+            """)
+        )
+
+    # Verify the inventory has been updated
+    with db.engine.begin() as connection:
+        result = connection.execute(
+            sqlalchemy.text("""
+                SELECT quantity FROM potions WHERE name = 'Blue Potion'
+            """)
+        ).fetchone()
+
+    assert result is not None
+    assert result["quantity"] == 15
+
+
