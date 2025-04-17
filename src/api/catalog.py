@@ -48,7 +48,7 @@ def create_catalog() -> List[CatalogItem]:
                     name="Red Potion",
                     quantity=row.red_potions,
                     price=price_for("red", 50),
-                    potion_type=[100, 0, 0],
+                    potion_type=[100, 0, 0, 0],
                 )
             )
 

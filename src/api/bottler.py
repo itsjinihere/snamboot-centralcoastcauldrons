@@ -25,9 +25,11 @@ class PotionMixes(BaseModel):
         ..., ge=1, le=10000, description="Quantity must be between 1 and 10,000"
     )
 
-    @field_validator("potion_type")
+    @root_validator(pre=True)
     @classmethod
     def validate_potion_type(cls, potion_type: List[int]) -> List[int]:
+        if len(potion_type) != 4:
+            raise ValueError("Potion type must have exactly 4 elements: [r, g, b, d]")
         if sum(potion_type) != 100:
             raise ValueError("Sum of potion_type values must be exactly 100")
         return potion_type
@@ -57,11 +59,11 @@ def post_deliver_bottles(potions_delivered: List[PotionMixes], order_id: int):
         ml_used["green_ml"] += ml_total * (mix.potion_type[1] / 100)
         ml_used["blue_ml"] += ml_total * (mix.potion_type[2] / 100)
 
-        if mix.potion_type == [100, 0, 0]:
+        if mix.potion_type == [100, 0, 0, 0]:
             potions_made["red_potions"] += mix.quantity
-        elif mix.potion_type == [0, 100, 0]:
+        elif mix.potion_type == [0, 100, 0, 0]:
             potions_made["green_potions"] += mix.quantity
-        elif mix.potion_type == [0, 0, 100]:
+        elif mix.potion_type == [0, 0, 100, 0]:
             potions_made["blue_potions"] += mix.quantity
 
     with db.engine.begin() as connection:

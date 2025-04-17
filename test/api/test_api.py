@@ -46,14 +46,14 @@ def test_calculate_barrel_summary():
         Barrel(
             item_sku="R",  # Changed from sku to item_sku
             ml_per_barrel=1000,
-            potion_type=[1.0, 0, 0],
+            potion_type=[1.0, 0, 0, 0],
             price=100,
             quantity=2,
         ),
         Barrel(
             item_sku="G",  # Changed from sku to item_sku
             ml_per_barrel=1000,
-            potion_type=[0, 1.0, 0],
+            potion_type=[0, 1.0, 0, 0],
             price=150,
             quantity=1,
         ),
@@ -67,14 +67,14 @@ def test_create_barrel_plan_basic():
         Barrel(
             item_sku="R",  # Changed from sku to item_sku
             ml_per_barrel=1000,
-            potion_type=[1.0, 0, 0],
+            potion_type=[1.0, 0, 0, 0],
             price=100,
             quantity=1,
         ),
         Barrel(
             item_sku="G",  # Changed from sku to item_sku
             ml_per_barrel=1000,
-            potion_type=[0, 1.0, 0],
+            potion_type=[0, 1.0, 0, 0],
             price=150,
             quantity=1,
         ),
@@ -107,7 +107,7 @@ def test_create_bottle_plan_red():
         current_potion_inventory=[],
     )
     assert isinstance(result, list)
-    assert result[0].potion_type == [100, 0, 0]
+    assert result[0].potion_type == [100, 0, 0, 0]
 
 
 # ----- CATALOG -----
