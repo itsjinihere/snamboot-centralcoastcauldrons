@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, status
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, root_validator
 from typing import List, Optional
 import sqlalchemy
 import random
