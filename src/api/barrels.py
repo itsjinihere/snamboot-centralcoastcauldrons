@@ -150,8 +150,8 @@ def get_wholesale_purchase_plan(wholesale_catalog: List[Barrel]):
         row = connection.execute(
             sqlalchemy.text(
                 """
-                SELECT gold, red_ml, green_ml, blue_ml,
-                       red_potions, green_potions, blue_potions
+                SELECT gold, red_ml, green_ml, blue_ml, dark_ml,
+                       red_potions, green_potions, blue_potions, dark_potions
                 FROM global_inventory
                 """
             )
