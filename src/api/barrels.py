@@ -166,7 +166,7 @@ def get_wholesale_purchase_plan(wholesale_catalog: List[Barrel]):
         current_red_ml=row.red_ml,
         current_green_ml=row.green_ml,
         current_blue_ml=row.blue_ml,
-        current_dark_ml=row.dark_ml
+        current_dark_ml=row.dark_ml,
         red_potions=row.red_potions,
         green_potions=row.green_potions,
         blue_potions=row.blue_potions,
