@@ -96,9 +96,11 @@ def create_bottle_plan(
     red_ml: Optional[int] = None,
     green_ml: Optional[int] = None,
     blue_ml: Optional[int] = None,
+    dark_ml: Optional[int] = None,
     red_potions: Optional[int] = None,
     green_potions: Optional[int] = None,
     blue_potions: Optional[int] = None,
+    dark_potions: Optional[int] = None,
     maximum_potion_capacity: int = 50,
     current_potion_inventory: List[PotionMixes] = [],
 ) -> List[PotionMixes]:
@@ -127,8 +129,10 @@ def get_bottle_plan():
         red_ml=100,
         green_ml=0,
         blue_ml=0,
+        dark_ml=0,
         red_potions=0,
         green_potions=0,
         blue_potions=0,
+        dark_potions=0,
         maximum_potion_capacity=50,
     )

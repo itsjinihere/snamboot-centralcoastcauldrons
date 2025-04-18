@@ -99,6 +99,7 @@ def create_barrel_plan(
     current_red_ml: int,
     current_green_ml: int,
     current_blue_ml: int,
+    current_dark_ml: int,
     red_potions: int,
     green_potions: int,
     blue_potions: int,
@@ -107,7 +108,7 @@ def create_barrel_plan(
     print(
         f"gold: {gold}, max_barrel_capacity: {max_barrel_capacity}, "
         f"current_red_ml: {current_red_ml}, current_green_ml: {current_green_ml}, "
-        f"current_blue_ml: {current_blue_ml}, "
+        f"current_blue_ml: {current_blue_ml}, ", f"current_dark_ml: {current_dark_ml}, "
         f"red_potions: {red_potions}, green_potions: {green_potions}, blue_potions: {blue_potions}, "
         f"wholesale_catalog: {wholesale_catalog}"
     )
@@ -165,8 +166,10 @@ def get_wholesale_purchase_plan(wholesale_catalog: List[Barrel]):
         current_red_ml=row.red_ml,
         current_green_ml=row.green_ml,
         current_blue_ml=row.blue_ml,
+        current_dark_ml=row.dark_ml
         red_potions=row.red_potions,
         green_potions=row.green_potions,
         blue_potions=row.blue_potions,
+        dark_potions=row.dark_potions,
         wholesale_catalog=wholesale_catalog,
     )
