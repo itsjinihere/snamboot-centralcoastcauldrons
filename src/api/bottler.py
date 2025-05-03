@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, status, HTTPException
-from pydantic import BaseModel, Field, root_validator
+from pydantic import BaseModel, Field, model_validator
 from typing import List, Optional
 from uuid import UUID
 import sqlalchemy
@@ -18,10 +18,13 @@ class PotionMix(BaseModel):
     potion_type: List[int] = Field(..., min_length=4, max_length=4)
     quantity: int = Field(..., ge=1)
 
-    @root_validator
+    @model_validator(mode="before")
+    @classmethod
     def validate_mixture(cls, values):
-        mixture = values.get("potion_type")
-        if sum(mixture) != 100:
+        potion_type = values.get("potion_type")
+        if potion_type is None or len(potion_type) != 4:
+            raise ValueError("potion_type must have exactly 4 elements [r, g, b, d]")
+        if sum(potion_type) != 100:
             raise ValueError("potion_type values must sum to 100")
         return values
 
@@ -38,7 +41,7 @@ def deliver_bottled_potions(potions: List[PotionMix]):
                     {"oid": str(potion.order_id)}
                 ).first()
                 if existing:
-                    continue  # Skip already processed order
+                    continue
 
             potion_types = ["red", "green", "blue", "dark"]
             ml_resources = [f"{color}_ml" for color in potion_types]
