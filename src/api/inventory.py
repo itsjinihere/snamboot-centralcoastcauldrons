@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 import sqlalchemy
 from src.api import auth
 from src import database as db
+from typing import Optional
+from uuid import UUID
 
 router = APIRouter(
     prefix="/inventory",
@@ -10,98 +12,103 @@ router = APIRouter(
     dependencies=[Depends(auth.get_api_key)],
 )
 
-
 class InventoryAudit(BaseModel):
     number_of_potions: int
     ml_in_barrels: int
     gold: int
 
-
 class CapacityPlan(BaseModel):
-    potion_capacity: int = Field(
-        ge=0, le=10, description="Potion capacity units, max 10"
-    )
+    potion_capacity: int = Field(ge=0, le=10, description="Potion capacity units, max 10")
     ml_capacity: int = Field(ge=0, le=10, description="ML capacity units, max 10")
-
 
 @router.get("/audit", response_model=InventoryAudit)
 def get_inventory():
     """
-    Returns an audit of the current inventory. Any discrepancies between
-    what is reported here and my source of truth will be posted
-    as errors on potion exchange.
+    Returns an audit of the current inventory using the ledger.
     """
     with db.engine.begin() as connection:
-        row = connection.execute(
-            sqlalchemy.text(
-                """
-                SELECT gold, red_ml, green_ml, blue_ml,
-                       red_potions, green_potions, blue_potions
-                FROM global_inventory
-                LIMIT 1
-                """
-            )
-        ).first()
+        gold = connection.execute(
+            sqlalchemy.text("""
+                SELECT COALESCE(SUM(change), 0) FROM ledger_entries
+                WHERE resource = 'gold'
+            """)
+        ).scalar_one()
 
-        if row is None:
-            raise RuntimeError("No inventory row found")
+        ml_in_barrels = connection.execute(
+            sqlalchemy.text("""
+                SELECT COALESCE(SUM(change), 0) FROM ledger_entries
+                WHERE resource IN ('red_ml', 'green_ml', 'blue_ml', 'dark_ml')
+            """)
+        ).scalar_one()
 
-        total_ml = row.red_ml + row.green_ml + row.blue_ml
-        total_potions = row.red_potions + row.green_potions + row.blue_potions
+        potions = connection.execute(
+            sqlalchemy.text("""
+                SELECT COALESCE(SUM(change), 0) FROM ledger_entries
+                WHERE resource IN ('red_potion', 'green_potion', 'blue_potion', 'dark_potion')
+            """)
+        ).scalar_one()
 
         return InventoryAudit(
-            number_of_potions=total_potions,
-            ml_in_barrels=total_ml,
-            gold=row.gold,
+            number_of_potions=potions,
+            ml_in_barrels=ml_in_barrels,
+            gold=gold
         )
-
 
 @router.post("/plan", response_model=CapacityPlan)
 def get_capacity_plan():
     """
-    Provides a daily capacity purchase plan.
-
-    - Start with 1 capacity for 50 potions and 1 capacity for 10,000 ml of potion.
-    - Each additional capacity unit costs 1000 gold.
+    Hardcoded plan: start with 1 unit of each. More costs gold.
     """
-    return CapacityPlan(potion_capacity=0, ml_capacity=0)
-
+    return CapacityPlan(potion_capacity=1, ml_capacity=1)
 
 @router.post("/deliver/{order_id}", status_code=status.HTTP_204_NO_CONTENT)
-def deliver_capacity_plan(capacity_purchase: CapacityPlan, order_id: int):
+def deliver_capacity_plan(capacity_purchase: CapacityPlan, order_id: UUID):
     """
-    Processes the delivery of the planned capacity purchase. order_id is a
-    unique value representing a single delivery; the call is idempotent.
-
-    - Start with 1 capacity for 50 potions and 1 capacity for 10,000 ml of potion.
-    - Each additional capacity unit costs 1000 gold.
+    Processes the delivery of a capacity purchase using a ledger-based and idempotent design.
     """
-    print(f"capacity delivered: {capacity_purchase} order_id: {order_id}")
-    pass
-
-
-@router.post("/seed_inventory", tags=["admin"])
-def seed_inventory():
     with db.engine.begin() as connection:
-        row = connection.execute(
-            sqlalchemy.text("SELECT COUNT(*) FROM global_inventory")
+        # Check for duplicate execution
+        existing = connection.execute(
+            sqlalchemy.text("""
+                SELECT 1 FROM executed_orders WHERE order_id = :oid
+            """),
+            {"oid": str(order_id)}
+        ).first()
+
+        if existing:
+            return  # Already processed
+
+        # Determine how many extra capacity units were purchased
+        extra_potion_capacity = max(capacity_purchase.potion_capacity - 1, 0)
+        extra_ml_capacity = max(capacity_purchase.ml_capacity - 1, 0)
+
+        total_cost = (extra_potion_capacity + extra_ml_capacity) * 1000
+
+        current_gold = connection.execute(
+            sqlalchemy.text("""
+                SELECT COALESCE(SUM(change), 0) FROM ledger_entries
+                WHERE resource = 'gold'
+            """)
         ).scalar_one()
 
-        if row > 0:
-            return {"message": "Already seeded."}
+        if total_cost > current_gold:
+            raise HTTPException(status_code=400, detail="Insufficient gold")
+
+        if total_cost > 0:
+            connection.execute(
+                sqlalchemy.text("""
+                    INSERT INTO ledger_entries (resource, change, context)
+                    VALUES ('gold', :change, 'Capacity upgrade')
+                """),
+                {"change": -total_cost}
+            )
 
         connection.execute(
-            sqlalchemy.text(
-                """
-                INSERT INTO global_inventory (
-                    id, gold, red_ml, green_ml, blue_ml,
-                    red_potions, green_potions, blue_potions
-                ) VALUES (
-                    1, 1000, 1000, 1000, 1000,
-                    10, 10, 10
-                )
-                """
-            )
+            sqlalchemy.text("""
+                INSERT INTO executed_orders (order_id)
+                VALUES (:oid)
+            """),
+            {"oid": str(order_id)}
         )
 
-    return {"message": "Seeded global_inventory with initial values!"}
+    return

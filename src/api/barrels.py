@@ -1,12 +1,11 @@
-from dataclasses import dataclass
 from fastapi import APIRouter, Depends, status, HTTPException
 from pydantic import BaseModel, Field, field_validator
-from typing import List
+from typing import List, Optional
+from uuid import UUID
 import random
 import sqlalchemy
 from src.api import auth
 from src import database as db
-from datetime import datetime
 
 router = APIRouter(
     prefix="/barrels",
@@ -14,162 +13,127 @@ router = APIRouter(
     dependencies=[Depends(auth.get_api_key)],
 )
 
+# ---- Models ----
 
 class Barrel(BaseModel):
-    sku: str  
-    ml_per_barrel: int = Field(gt=0, description="Must be greater than 0")
-    potion_type: List[float] = Field(
-        ...,
-        min_length=4,
-        max_length=4,
-        description="Must contain exactly 4 elements: [r, g, b, d] that sum to 1.0",
-    )
-    price: int = Field(ge=0, description="Price must be non-negative")
-    quantity: int = Field(ge=0, description="Quantity must be non-negative")
-    timestamp: datetime = Field(
-        default_factory=datetime.utcnow
-    )  # Added timestamp field
+    order_id: Optional[UUID] = None
+    sku: str
+    potion_type: List[float] = Field(..., min_length=4, max_length=4)
+    price: int = Field(ge=0)
+    quantity: int = Field(ge=0)
 
     @field_validator("potion_type")
     @classmethod
-    def validate_potion_type(cls, potion_type: List[float]) -> List[float]:
-        if len(potion_type) != 4:
-            raise ValueError("potion_type must have exactly 4 elements: [r, g, b, d]")
-        if not abs(sum(potion_type) - 1.0) < 1e-6:
-            raise ValueError("Sum of potion_type values must be exactly 1.0")
-        return potion_type
-
+    def validate_sum(cls, values: List[float]) -> List[float]:
+        if not abs(sum(values) - 1.0) < 1e-6:
+            raise ValueError("Potion type fractions must sum to 1.0")
+        return values
 
 class BarrelOrder(BaseModel):
-    sku: str  # Changed from 'sku' to 'item_sku'
-    quantity: int = Field(gt=0, description="Quantity must be greater than 0")
+    sku: str
+    quantity: int = Field(gt=0)
 
+# ---- Utilities ----
 
-@dataclass
-class BarrelSummary:
-    gold_paid: int
+def get_current_inventory(connection):
+    query = """
+        SELECT 
+            COALESCE(SUM(CASE WHEN resource = 'gold' THEN change ELSE 0 END), 0) AS gold,
+            COALESCE(SUM(CASE WHEN resource = 'red_ml' THEN change ELSE 0 END), 0) AS red_ml,
+            COALESCE(SUM(CASE WHEN resource = 'green_ml' THEN change ELSE 0 END), 0) AS green_ml,
+            COALESCE(SUM(CASE WHEN resource = 'blue_ml' THEN change ELSE 0 END), 0) AS blue_ml,
+            COALESCE(SUM(CASE WHEN resource = 'dark_ml' THEN change ELSE 0 END), 0) AS dark_ml
+        FROM ledger_entries
+    """
+    return connection.execute(sqlalchemy.text(query)).mappings().one()
 
-
-def calculate_barrel_summary(barrels: List[Barrel]) -> BarrelSummary:
-    return BarrelSummary(gold_paid=sum(b.price * b.quantity for b in barrels))
-
+# ---- Endpoint: /barrels/deliver/{order_id} ----
 
 @router.post("/deliver/{order_id}", status_code=status.HTTP_204_NO_CONTENT)
-def post_deliver_barrels(barrels_delivered: List[Barrel], order_id: int):
-    print(f"barrels delivered: {barrels_delivered} order_id: {order_id}")
-
-    delivery = calculate_barrel_summary(barrels_delivered)
-
-    ml_totals: dict[str, float] = {
-        "red_ml": 0.0,
-        "green_ml": 0.0,
-        "blue_ml": 0.0,
-    }
-
-    for barrel in barrels_delivered:
-        total_ml = barrel.ml_per_barrel * barrel.quantity
-        ml_totals["red_ml"] += total_ml * barrel.potion_type[0]
-        ml_totals["green_ml"] += total_ml * barrel.potion_type[1]
-        ml_totals["blue_ml"] += total_ml * barrel.potion_type[2]
-
+def deliver_barrels(barrels: List[Barrel], order_id: UUID):
     with db.engine.begin() as connection:
+        # Check for duplicate order
+        existing = connection.execute(
+            sqlalchemy.text("SELECT 1 FROM executed_orders WHERE order_id = :oid"),
+            {"oid": str(order_id)}
+        ).first()
+        if existing:
+            return  # Idempotent: do nothing if already processed
+
+        total_gold = sum(barrel.price * barrel.quantity for barrel in barrels)
+
+        # Compute total ml per color
+        color_map = ["red_ml", "green_ml", "blue_ml", "dark_ml"]
+        ml_totals = {color: 0 for color in color_map}
+
+        for barrel in barrels:
+            ml_per_barrel = 1000  # Fixed amount
+            total_ml = barrel.quantity * ml_per_barrel
+            for i, color in enumerate(color_map):
+                ml_totals[color] += int(total_ml * barrel.potion_type[i])
+
+        # Insert ledger entries for ml and gold
+        for color, amount in ml_totals.items():
+            if amount > 0:
+                connection.execute(
+                    sqlalchemy.text(
+                        "INSERT INTO ledger_entries (resource, change, context) VALUES (:resource, :change, 'barrel delivery')"
+                    ),
+                    {"resource": color, "change": amount}
+                )
+
         connection.execute(
             sqlalchemy.text(
-                """
-                UPDATE global_inventory
-                SET
-                    gold = gold - :gold_paid,
-                    red_ml = red_ml + :red_ml,
-                    green_ml = green_ml + :green_ml,
-                    blue_ml = blue_ml + :blue_ml
-                """
+                "INSERT INTO ledger_entries (resource, change, context) VALUES ('gold', :change, 'barrel delivery')"
             ),
-            {
-                "gold_paid": delivery.gold_paid,
-                "red_ml": int(ml_totals["red_ml"]),
-                "green_ml": int(ml_totals["green_ml"]),
-                "blue_ml": int(ml_totals["blue_ml"]),
-            },
+            {"change": -total_gold}
         )
 
+        # Record order ID for idempotency
+        connection.execute(
+            sqlalchemy.text("INSERT INTO executed_orders (order_id) VALUES (:oid)"),
+            {"oid": str(order_id)}
+        )
 
-def create_barrel_plan(
-    gold: int,
-    max_barrel_capacity: int,
-    current_red_ml: int,
-    current_green_ml: int,
-    current_blue_ml: int,
-    current_dark_ml: int,
-    red_potions: int,
-    green_potions: int,
-    blue_potions: int,
-    wholesale_catalog: List[Barrel],
-) -> List[BarrelOrder]:
-    print(
-        f"gold: {gold}, max_barrel_capacity: {max_barrel_capacity}, "
-        f"current_red_ml: {current_red_ml}, current_green_ml: {current_green_ml}, "
-        f"current_blue_ml: {current_blue_ml}, ", f"current_dark_ml: {current_dark_ml}, "
-        f"red_potions: {red_potions}, green_potions: {green_potions}, blue_potions: {blue_potions}, "
-        f"wholesale_catalog: {wholesale_catalog}"
-    )
-
-    color_index_map = {"red": 0, "green": 1, "blue": 2}
-    potion_counts = {"red": red_potions, "green": green_potions, "blue": blue_potions}
-    eligible_colors = [color for color, count in potion_counts.items() if count < 5]
-
-    if not eligible_colors:
-        return []
-
-    chosen_color = random.choice(eligible_colors)
-    idx = color_index_map[chosen_color]
-
-    matching_barrels = [
-        barrel for barrel in wholesale_catalog if barrel.potion_type[idx] == 1.0
-    ]
-
-    cheapest_barrel = min(matching_barrels, key=lambda b: b.price, default=None)
-
-    current_capacity = current_red_ml + current_green_ml + current_blue_ml
-
-    if (
-        cheapest_barrel
-        and cheapest_barrel.price <= gold
-        and current_capacity + cheapest_barrel.ml_per_barrel <= max_barrel_capacity
-    ):
-        return [
-            BarrelOrder(sku=cheapest_barrel.sku, quantity=1)
-        ]  # Updated to item_sku
-
-    return []
+# ---- Endpoint: /barrels/plan ----
 
 @router.post("/plan", response_model=List[BarrelOrder])
-def get_wholesale_purchase_plan(wholesale_catalog: List[Barrel]):
-    print(f"barrel catalog: {wholesale_catalog}")
-
+def plan_barrels(catalog: List[Barrel]):
     with db.engine.begin() as connection:
-        row = connection.execute(
-            sqlalchemy.text(
-                """
-                SELECT gold, red_ml, green_ml, blue_ml, dark_ml,
-                       red_potions, green_potions, blue_potions, dark_potions
-                FROM global_inventory
-                """
-            )
-        ).first()  # Changed to .first()
+        inventory = get_current_inventory(connection)
 
-    if not row:
-        raise HTTPException(status_code=404, detail="No inventory row found")
+        # Get potion counts
+        potions = connection.execute(
+            sqlalchemy.text("""
+                SELECT 
+                    COALESCE(SUM(CASE WHEN resource = 'red_potions' THEN change ELSE 0 END), 0) AS red_potions,
+                    COALESCE(SUM(CASE WHEN resource = 'green_potions' THEN change ELSE 0 END), 0) AS green_potions,
+                    COALESCE(SUM(CASE WHEN resource = 'blue_potions' THEN change ELSE 0 END), 0) AS blue_potions
+                FROM ledger_entries
+            """)
+        ).mappings().one()
 
-    return create_barrel_plan(
-        gold=row.gold,
-        max_barrel_capacity=10000,
-        current_red_ml=row.red_ml,
-        current_green_ml=row.green_ml,
-        current_blue_ml=row.blue_ml,
-        current_dark_ml=row.dark_ml,
-        red_potions=row.red_potions,
-        green_potions=row.green_potions,
-        blue_potions=row.blue_potions,
-        dark_potions=row.dark_potions,
-        wholesale_catalog=wholesale_catalog,
-    )
+        # Choose a color with < 5 potions
+        potion_counts = {
+            "red": potions.red_potions,
+            "green": potions.green_potions,
+            "blue": potions.blue_potions,
+        }
+        candidates = [color for color, count in potion_counts.items() if count < 5]
+        if not candidates:
+            return []
+
+        chosen_color = random.choice(candidates)
+        color_index = {"red": 0, "green": 1, "blue": 2}[chosen_color]
+
+        # Find matching barrels
+        eligible = [
+            b for b in catalog
+            if b.potion_type[color_index] == 1.0 and b.price <= inventory.gold
+        ]
+
+        if not eligible:
+            return []
+
+        best_barrel = min(eligible, key=lambda b: b.price)
+        return [BarrelOrder(sku=best_barrel.sku, quantity=1)]

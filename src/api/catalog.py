@@ -4,11 +4,13 @@ from typing import List, Annotated
 import sqlalchemy
 from src import database as db
 
-router = APIRouter()
-
+router = APIRouter(
+    prefix="/catalog",
+    tags=["catalog"]
+)
 
 class CatalogItem(BaseModel):
-    sku: Annotated[str, Field(pattern=r"^[a-zA-Z0-9_]{1,20}$")]
+    sku: Annotated[str, Field(pattern=r"^[A-Z_0-9]{1,20}$")]
     name: str
     quantity: Annotated[int, Field(ge=1, le=10000)]
     price: Annotated[int, Field(ge=1, le=500)]
@@ -19,68 +21,63 @@ class CatalogItem(BaseModel):
         description="Must contain exactly 4 elements: [r, g, b, d]",
     )
 
+POTION_DEFINITIONS = {
+    "RED_POTION_0": {
+        "name": "Red Potion",
+        "base_price": 50,
+        "type": [100, 0, 0, 0],
+        "resource": "red_potions",
+    },
+    "GREEN_POTION_0": {
+        "name": "Green Potion",
+        "base_price": 60,
+        "type": [0, 100, 0, 0],
+        "resource": "green_potions",
+    },
+    "BLUE_POTION_0": {
+        "name": "Blue Potion",
+        "base_price": 70,
+        "type": [0, 0, 100, 0],
+        "resource": "blue_potions",
+    },
+    "DARK_POTION_0": {
+        "name": "Dark Potion",
+        "base_price": 90,
+        "type": [0, 0, 0, 100],
+        "resource": "dark_potions",
+    },
+}
 
-def create_catalog() -> List[CatalogItem]:
+def fetch_potion_balances():
     with db.engine.begin() as connection:
-        row = connection.execute(
-            sqlalchemy.text("""
-                SELECT red_potions, green_potions, blue_potions
-                FROM global_inventory
-                LIMIT 1
-            """)
-        ).first()
+        result = connection.execute(sqlalchemy.text("""
+            SELECT
+                resource,
+                SUM(change) AS total
+            FROM ledger_entries
+            WHERE resource IN ('red_potions', 'green_potions', 'blue_potions', 'dark_potions')
+            GROUP BY resource
+        """)).mappings().all()
 
-        if not row:
-            return []
+    return {row["resource"]: row["total"] or 0 for row in result}
 
-        catalog = []
+def determine_price(base: int, quantity: int) -> int:
+    return min(base + 10, 500) if quantity < 4 else base
 
-        def price_for(color: str, base: int) -> int:
-            count = getattr(row, f"{color}_potions")
-            if count < 4:
-                return min(base + 10, 500)
-            return base
+@router.get("/", response_model=List[CatalogItem])
+def get_catalog():
+    potion_balances = fetch_potion_balances()
+    catalog: List[CatalogItem] = []
 
-        if row.red_potions > 0:
-            catalog.append(
-                CatalogItem(
-                    sku="RED_POTION_0",
-                    name="Red Potion",
-                    quantity=row.red_potions,
-                    price=price_for("red", 50),
-                    potion_type=[100, 0, 0, 0],
-                )
-            )
+    for sku, info in POTION_DEFINITIONS.items():
+        qty = potion_balances.get(info["resource"], 0)
+        if qty > 0:
+            catalog.append(CatalogItem(
+                sku=sku,
+                name=info["name"],
+                quantity=qty,
+                price=determine_price(info["base_price"], qty),
+                potion_type=info["type"]
+            ))
 
-        if row.green_potions > 0:
-            catalog.append(
-                CatalogItem(
-                    sku="GREEN_POTION_0",
-                    name="Green Potion",
-                    quantity=row.green_potions,
-                    price=price_for("green", 60),
-                    potion_type=[0, 100, 0],
-                )
-            )
-
-        if row.blue_potions > 0:
-            catalog.append(
-                CatalogItem(
-                    sku="BLUE_POTION_0",
-                    name="Blue Potion",
-                    quantity=row.blue_potions,
-                    price=price_for("blue", 70),
-                    potion_type=[0, 0, 100],
-                )
-            )
-
-        return catalog[:6]
-
-
-@router.get("/catalog/", tags=["catalog"], response_model=List[CatalogItem])
-def get_catalog() -> List[CatalogItem]:
-    """
-    Retrieves the catalog of items. Each unique item combination should have only a single price.
-    You can have at most 6 potion SKUs offered in your catalog at one time.
-    """
-    return create_catalog()
+    return catalog[:6]
