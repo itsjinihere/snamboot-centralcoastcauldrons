@@ -72,6 +72,19 @@ def deliver_bottled_potions(potions: List[PotionMix]):
                     {"resource": resource, "change": change, "context": context}
                 )
 
+            # Log to bottling_logs
+            connection.execute(
+                sqlalchemy.text("""
+                    INSERT INTO bottling_logs (potion_type, quantity, timestamp)
+                    VALUES (:potion_type, :quantity, NOW())
+                """),
+                {
+                    "potion_type": potion.potion_type,
+                    "quantity": potion.quantity,
+                }
+            )
+
+
             if potion.order_id:
                 connection.execute(
                     sqlalchemy.text("""

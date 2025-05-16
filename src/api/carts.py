@@ -129,6 +129,19 @@ def checkout(cart_id: int, cart_checkout: CartCheckout):
                 entry
             )
 
+    # Log to checkout_logs
+        connection.execute(
+            sqlalchemy.text("""
+                INSERT INTO checkout_logs (total_potions, total_gold, timestamp)
+                VALUES (:total_potions, :total_gold, NOW())
+            """),
+            {
+                "total_potions": total_potions,
+                "total_gold": total_gold,
+            }
+        )
+
+
         response = {
             "total_potions_bought": total_potions,
             "total_gold_paid": total_gold
