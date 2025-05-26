@@ -6,6 +6,8 @@ from typing import List
 from datetime import datetime
 from src import database as db
 from src.api import auth
+from enum import Enum
+from typing import Optional
 
 router = APIRouter(
     prefix="/carts",
@@ -166,3 +168,69 @@ def checkout(cart_id: int, cart_checkout: CartCheckout):
         )
 
     return CheckoutResponse(**response)
+
+class SearchSortOptions(str, Enum):
+    customer_name = "customer_name"
+    item_sku = "item_sku"
+    line_item_total = "line_item_total"
+    timestamp = "timestamp"
+
+class SearchSortOrder(str, Enum):
+    asc = "asc"
+    desc = "desc"
+
+class LineItem(BaseModel):
+    line_item_id: int
+    item_sku: str
+    customer_name: str
+    line_item_total: int
+    timestamp: str
+
+class SearchResponse(BaseModel):
+    previous: Optional[str] = None
+    next: Optional[str] = None
+    results: List[LineItem]
+
+@router.get("/search/", response_model=SearchResponse)
+def search_orders(
+    customer_name: str = "",
+    potion_sku: str = "",
+    search_page: str = "",
+    sort_col: SearchSortOptions = SearchSortOptions.timestamp,
+    sort_order: SearchSortOrder = SearchSortOrder.desc,
+):
+    with db.engine.begin() as connection:
+        results = connection.execute(
+            sqlalchemy.text(f"""
+                SELECT ci.id AS line_item_id,
+                       ci.item_sku,
+                       c.customer_name,
+                       (ci.quantity * ci.unit_price) AS line_item_total,
+                       ci.timestamp
+                FROM cart_items ci
+                JOIN carts c ON ci.cart_id = c.cart_id
+                WHERE c.customer_name ILIKE :customer_name
+                  AND ci.item_sku ILIKE :potion_sku
+                ORDER BY {sort_col.value} {sort_order.value}
+                LIMIT 50
+            """),
+            {
+                "customer_name": f"%{customer_name}%",
+                "potion_sku": f"%{potion_sku}%",
+            }
+        ).mappings().all()
+
+    return SearchResponse(
+        previous=None,
+        next=None,
+        results=[
+            LineItem(
+                line_item_id=row["line_item_id"],
+                item_sku=row["item_sku"],
+                customer_name=row["customer_name"],
+                line_item_total=row["line_item_total"],
+                timestamp=row["timestamp"].isoformat()
+            )
+            for row in results
+        ]
+    )
